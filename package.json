@@ -11,7 +11,7 @@
     "i18n": "^0.15.3",
     "limiter": "^3.0.0",
     "node-cache": "^5.1.2",
-    "npm-check-updates": "^22.2.6",
+    "npm-check-updates": "^22.2.7",
     "pretty-time": "^1.1.0",
     "pureimage": "^0.4.18",
     "sharp": "^0.35.2",

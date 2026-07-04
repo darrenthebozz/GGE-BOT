@@ -1,25 +1,35 @@
-const path = require("path")
-const crypto = require('crypto')
-const undici = require('undici')
-const fs = require('fs/promises')
+const { execSync } = require('node:child_process')
+const { createRequire } = require('node:module')
+const fs = require('node:fs/promises')
+const path = require("node:path")
+
+//Check if needs update
+//Check if file exists package.json
+//Run npm install
+
+const crypto = require('node:crypto')
 const http = require('node:http')
-const { createProxyMiddleware } = require("http-proxy-middleware")
-const express = require('express')
 const https = require('node:https')
-const bodyParser = require('body-parser')
-const { WebSocketServer } = require("ws")
-const { parseStringPromise } = require('xml2js')
 const { DatabaseSync } = require('node:sqlite')
 const { Worker } = require('node:worker_threads')
+const { EventEmitter } = require('node:stream')
+
+const { WebSocketServer } = require("ws")
+if(1)
+process.exit(0)
+const { createProxyMiddleware } = require("http-proxy-middleware")
+const express = require('express')
+const bodyParser = require('body-parser')
+const { parseStringPromise } = require('xml2js')
 const { Client, Events, GatewayIntentBits, PermissionFlagsBits } = require('discord.js')
+const { I18n } = require('i18n')
+
 const ErrorType = require('./errors.json')
 const ActionType = require('./actions.json')
-const { I18n } = require('i18n')
-const { EventEmitter } = require('node:stream')
+const { exit } = require('node:process')
 // if(process.platform === "win32")
 // require("node-prevent-sleep").enable()
 const events = new EventEmitter()
-
 
 const i18n = new I18n({
   locales: ['en', 'de', 'ar', 'fi', 'he', 'hu', 'pl', 'ro', 'tr', 'cs', 'nl', 'fr'],
@@ -379,7 +389,7 @@ async function start() {
       client.once(Events.ClientReady, () => {
         resolve()
         app.get('/discordAuth', async (request, response) => {
-          const tokenResponseData = await undici.request('https://discord.com/api/oauth2/token', {
+          const oauthData = await fetch('https://discord.com/api/oauth2/token', {
             method: 'POST',
             body: new URLSearchParams({
               client_id: ggeConfig.discordClientId,
@@ -392,15 +402,13 @@ async function start() {
             headers: {
               'Content-Type': 'application/x-www-form-urlencoded',
             }
-          })
+          }).then(o => o.json())
 
-          const oauthData = await tokenResponseData.body.json()
-          const userResult = await undici.request('https://discord.com/api/users/@me', {
-            headers: {
-              authorization: `${oauthData.token_type} ${oauthData.access_token}`,
+          const discordIdentifier = await fetch('https://discord.com/api/users/@me', {
+            headers : {
+              authorization: `${oauthData.token_type} ${oauthData.access_token}`
             }
-          })
-          let discordIdentifier = await userResult.body.json()
+          }).then(o => o.json())
           let guildId = request.query.guild_id
           if (!discordIdentifier.id)
             return response.send(i18n.__("missingDiscordID"))
