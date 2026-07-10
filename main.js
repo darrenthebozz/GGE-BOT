@@ -12,7 +12,6 @@ const { parseStringPromise } = require('xml2js')
 const { DatabaseSync } = require('node:sqlite')
 const { Worker } = require('node:worker_threads')
 const { Client, Events, GatewayIntentBits, PermissionFlagsBits } = require('discord.js')
-const ErrorType = require('./errors.json')
 const ActionType = require('./actions.json')
 const { I18n } = require('i18n')
 const { EventEmitter } = require('node:stream')
@@ -425,7 +424,7 @@ async function start() {
             .run(discordIdentifier.id, guildId, uuid)
 
           loggedInUsers[uuid].forEach(o =>
-            o.ws.send(JSON.stringify([ErrorType.Success, ActionType.GetChannels, [ggeConfig.discordClientId, channelData]])))
+            o.ws.send(JSON.stringify([ActionType.GetChannels, ggeConfig.discordClientId, channelData])))
           return response.send('<html><script language="JavaScript" type="text/javascript">window.close()</script><body>Successful</body></html>')
         })
       })
@@ -544,8 +543,8 @@ async function start() {
               worker.messageBufferCount = (worker.messageBufferCount + 1) % 25
               loggedInUsers[uuid]?.forEach(o => {
                 if (o.viewedUser == user.id)
-                  o.ws.send(JSON.stringify([ErrorType.Success, ActionType.GetLogs,
-                  [worker.messageBuffer, worker.messageBufferCount]]))
+                  o.ws.send(JSON.stringify([ActionType.GetLogs,
+                  worker.messageBuffer, worker.messageBufferCount]))
               })
               break
           }
@@ -611,7 +610,7 @@ async function start() {
           removeBot(user.id)
 
           loggedInUsers[uuid]?.forEach(({ ws }) =>
-            ws.send(JSON.stringify([ErrorType.Success, ActionType.GetUsers, [getUser(uuid), plugins.filter(e => !e.hidden)]])))
+            ws.send(JSON.stringify([ActionType.GetUsers, getUser(uuid), plugins.filter(e => !e.hidden)])))
           break
         case ActionType.GetLogs:
           // console.log("logged something")
@@ -619,15 +618,14 @@ async function start() {
           worker.messageBufferCount = (worker.messageBufferCount + 1) % 25
           loggedInUsers[uuid]?.forEach(o =>
             o.viewedUser == user.id ? o.ws.send(JSON.stringify([
-              ErrorType.Success,
               ActionType.GetLogs,
-              [worker.messageBuffer, worker.messageBufferCount]
+              worker.messageBuffer, worker.messageBufferCount
             ])) : undefined)
           break
         case ActionType.StatusUser:
           obj[1].id = user.id
           loggedInUsers[uuid]?.forEach(o =>
-            o.ws.send(JSON.stringify([ErrorType.Success, ActionType.StatusUser, obj[1]])))
+            o.ws.send(JSON.stringify([ActionType.StatusUser, obj[1]])))
           break
         case ActionType.RemoveUser:
           worker.off('exit', onTerminate)
@@ -707,12 +705,12 @@ async function start() {
 
   wss.addListener('connection', (ws, req) => {
     const refreshUsers = () =>
-      ws.send(JSON.stringify([ErrorType.Success, ActionType.GetUsers, [getUser(uuid), plugins.filter(e => !e.hidden)]]))
+      ws.send(JSON.stringify([ActionType.GetUsers, getUser(uuid), plugins.filter(e => !e.hidden)]))
 
     let uuid = req.headers.cookie?.split('; ').find(e => e.startsWith('uuid='))?.substring(5, Infinity)
 
     if (!loginCheck(uuid))
-      return ws.send(JSON.stringify([ErrorType.Unauthenticated, ActionType.GetUUID, {}]))
+      return ws.send(JSON.stringify([ActionType.GetUUID, "unauthenticated"]))
 
     loggedInUsers[uuid] ??= []
     loggedInUsers[uuid].push({ ws })
@@ -746,11 +744,10 @@ async function start() {
 
           return undefined
         }).filter((e) => e !== undefined)
-        ws.send(JSON.stringify([ErrorType.Success, ActionType.GetChannels, [ggeConfig.discordClientId, channelData]]))
+        ws.send(JSON.stringify([ActionType.GetChannels, ggeConfig.discordClientId, channelData]))
       }
       catch (e) {
-        ws.send(JSON.stringify([ErrorType.Success, ActionType.GetChannels,
-        [ggeConfig.discordClientId, ggeConfig.discordPort, undefined]]))
+        ws.send(JSON.stringify([ActionType.GetChannels, ggeConfig.discordClientId]))
         console.error(e)
       }
     }
@@ -782,10 +779,9 @@ async function start() {
               lastError = e
             }
           }
-          if (lastError) {
-            console.warn(lastError)
-            ws.send(JSON.stringify([ErrorType.Generic, ActionType.RemoveUser, {}]))
-          }
+          if (lastError)
+            console.debug(lastError)
+
           refreshUsers()
           break
         }
@@ -837,7 +833,7 @@ async function start() {
             }
           }
           loggedInUsers[uuid]?.forEach(({ ws }) =>
-            ws.send(JSON.stringify([ErrorType.Success, ActionType.GetUsers, [getUser(uuid), plugins.filter(e => !e.hidden)]])))
+            ws.send(JSON.stringify([ActionType.GetUsers, getUser(uuid), plugins.filter(e => !e.hidden)])))
           break
         }
         case ActionType.GetLogs: {
@@ -849,16 +845,13 @@ async function start() {
           const worker = botMap.get(user.id)
 
           if (worker == undefined)
-            return ws.send(JSON.stringify([ErrorType.Generic, ActionType.GetLogs, {}]))
+            return console.debug("Could not find worker to send logs")
 
           let loggedInUser = loggedInUsers[uuid].find(obj => obj.ws == ws)
           loggedInUser.viewedUser = user.id
-          loggedInUser.ws.send(JSON.stringify([ErrorType.Success, ActionType.GetLogs,
-          [worker.messageBuffer, worker.messageBufferCount]]))
+          loggedInUser.ws.send(JSON.stringify([ActionType.GetLogs, worker.messageBuffer, worker.messageBufferCount]))
           break
         }
-        default:
-          ws.send(JSON.stringify([ErrorType.UnknownAction, ActionType.Unknown, {}]))
       }
     })
     ws.addListener('close', () => {

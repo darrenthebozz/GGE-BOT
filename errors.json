@@ -1,9 +1,0 @@
-{
-    "Success": 0,
-    "UnknownAction": 1,
-    "Unauthenticated": 2,
-    "Authentication": 3,
-    "Generic": 4,
-    "DBError": 5,
-    "UnknownError": 6
-}
