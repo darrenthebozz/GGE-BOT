@@ -2,7 +2,7 @@
   "dependencies": {
     "bufferutil": "^4.1.0",
     "dayjs": "^1.11.21",
-    "discord.js": "^14.26.5",
+    "discord.js": "^14.27.0",
     "embedded-postgres": "^18.4.0-beta.17",
     "emoji-dictionary": "^1.0.12",
     "express": "^5.2.1",
@@ -12,11 +12,11 @@
     "node-cache": "^5.1.2",
     "npm-check-updates": "^22.2.9",
     "pretty-time": "^1.1.0",
-    "pureimage": "^0.4.18",
+    "pureimage": "^0.4.20",
     "sharp": "^0.35.3",
     "turl": "^1.1.2",
     "undici": "^8.7.0",
-    "ws": "^8.21.0",
+    "ws": "^8.21.1",
     "xml2js": "^0.6.2"
   }
 }
