@@ -1,0 +1,139 @@
+---
+export const prerender = true;
+---
+
+<button
+    id="dropdown-button"
+    class="font-medium text-heading hover:text-fg-brand"
+>
+    Login
+</button>
+<div
+    id="user-menu-dropdown"
+    class="text-left p-4 md:w-auto w-full text-sm border dark:border-gray-800 rounded-base shadow dark:bg-[#0A0A0F] m-auto"
+>
+    <button
+        id="user-toggle"
+        class="font-medium text-fg-brand pb-4 cursor-pointer">Sign Up</button
+    >
+    <form
+        id="user-form"
+        class="max-w-sm mx-auto rounded-sm shadow-sm w-xs h-full"
+    >
+        <div class="mb-5">
+            <label
+                for="username"
+                class="block mb-2.5 text-sm font-medium text-heading"
+                >Username</label
+            >
+            <input
+                type="text"
+                id="username"
+                name="username"
+                class="bg-neutral-secondary-medium border border-default-medium text-heading text-sm rounded-base focus:ring-brand focus:border-brand block w-full px-3 py-2.5 shadow-xs placeholder:text-body"
+                placeholder="username"
+                required
+            />
+        </div>
+        <div class="mb-5">
+            <label
+                for="password"
+                class="block mb-2.5 text-sm font-medium text-heading"
+                >Password</label
+            >
+            <input
+                type="password"
+                id="password"
+                name="password"
+                autocomplete="on"
+                class="bg-neutral-secondary-medium border border-default-medium text-heading text-sm rounded-base focus:ring-brand focus:border-brand block w-full px-3 py-2.5 shadow-xs placeholder:text-body"
+                placeholder="••••••••"
+                required
+            />
+        </div>
+        <label
+            for="remember-me"
+            class="flex items-center mb-5"
+        >
+            <input
+                id="remember-me"
+                name="agreedToTerms"
+                type="checkbox"
+                value=""
+                class="w-4 h-4 border border-default-medium rounded-xs bg-neutral-secondary-medium focus:ring-2 focus:ring-brand-soft"
+                required
+            />
+            <div class="ms-2 text-sm text-heading select-none">
+                Remember me
+            </div>
+            
+        </label>
+        <button
+            type="submit"
+            id="submit-button"
+            class="text-white bg-brand box-border border border-transparent hover:bg-brand-strong focus:ring-4 focus:ring-brand-medium shadow-xs font-medium leading-5 rounded-base text-sm px-4 py-2.5 focus:outline-none"
+            >Sign In</button
+        >
+    </form>
+</div>
+<script>
+    import { Dropdown, DropdownOptions } from "flowbite";
+
+    function signUp(username : string, password : string, rememberMe : string) {
+
+    }
+    function login(username : string, password : string, rememberMe : string) {
+
+    }
+    
+    const $targetEl = document.getElementById("user-menu-dropdown") as HTMLElement;
+    const $triggerEl = document.getElementById("dropdown-button") as HTMLElement;
+    const $button = document.getElementById("user-toggle") as HTMLElement;
+    const $submitButton = document.getElementById("submit-button") as HTMLElement;
+
+    const LoginUIState = {
+        signIn: "Sign In",
+        signUp: "Sign Up",
+    };
+    const options: DropdownOptions = {
+        placement: "bottom",
+        triggerType: "click",
+        offsetSkidding: 0,
+        offsetDistance: 10,
+        delay: 300,
+        ignoreClickOutsideClass: true,
+        onShow: () =>
+            $submitButton.innerHTML === LoginUIState.signUp && toggleButton()
+    };
+
+    const dropDown = new Dropdown($targetEl, $triggerEl, options);
+    dropDown.show();
+
+    const toggleButton = $button.onclick = () => {
+        [$submitButton.innerHTML, $button.innerHTML] =
+            $submitButton.innerHTML === LoginUIState.signIn
+                ? [LoginUIState.signUp, LoginUIState.signIn]
+                : [LoginUIState.signIn, LoginUIState.signUp];
+        dropDown.init();
+    };
+
+    const $userForm = document.getElementById("user-form") as HTMLFormElement;
+    $userForm.addEventListener("submit", async function (event) {
+        event.preventDefault();
+        const formData = new FormData($userForm);
+        if ($submitButton.innerHTML === LoginUIState.signIn) {
+            await login(formData.get("username") as string, 
+                  formData.get("password") as string,
+                  formData.get("rememberMe") as string);
+                
+            window.location.replace("/");
+        }
+        else {
+            await signUp(formData.get("username") as string, 
+                  formData.get("password") as string,
+                  formData.get("rememberMe") as string)
+
+            window.location.replace("/");
+        }
+    });
+</script>

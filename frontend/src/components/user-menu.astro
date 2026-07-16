@@ -1,0 +1,52 @@
+<button
+    id="mega-menu-dropdown-button"
+    data-dropdown-toggle="user-menu-dropdown"
+    class="flex items-center justify-between font-medium text-heading hover:bg-neutral-secondary-soft hover:text-fg-brand"
+>
+    <img
+        class="w-10 h-10 rounded-full"
+        src="/favicon.ico"
+        alt="Rounded avatar"
+    />
+    <svg
+        class="w-4 h-4 ms-1.5"
+        aria-hidden="true"
+        xmlns="http://www.w3.org/2000/svg"
+        width="24"
+        height="24"
+        fill="none"
+        viewBox="0 0 24 24"
+        ><path
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="m19 9-7 7-7-7"></path></svg
+    >
+</button>
+<div
+    id="user-menu-dropdown"
+    class="absolute z-10 hidden w-auto text-sm bg-neutral-primary-soft border border-default rounded-base shadow"
+>
+    <div class="p-4 text-heading">
+        <ul class="space-y-3" aria-labelledby="mega-menu-dropdown-button">
+            <li>
+                <button class="text-right hover:text-fg-brand">Settings</button >
+            </li>
+            <li>
+                <button id="sign-out" class="text-right hover:text-fg-brand">Sign out</button >
+            </li>
+        </ul>
+    </div>
+</div>
+<script>
+    import { createAuthClient } from "better-auth/client";
+    
+    const $signOut = document.getElementById(
+        "sign-out",
+    ) as HTMLElement;
+    $signOut.onclick = async function() {
+        await createAuthClient().signOut();
+        window.location.replace("/");
+    }
+</script>

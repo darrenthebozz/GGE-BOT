@@ -1,0 +1,23 @@
+---
+import logo from "../img/logo.webp";
+import { Image } from "astro:assets";
+export const prerender = true;
+---
+
+<div class="h-full">
+    <Image src={logo} alt="Logo" class="m-auto" />
+    <h1
+        class="text-3xl font-bold text-gray-900 sm:text-5xl sm:tracking-tight dark:text-white p-4"
+    >
+        Empire Bot
+    </h1>
+    <p class="font-semibold text-gray-500 dark:text-gray-400 p-4">
+        <a
+            href="https://github.com/darrenthebozz/GGE-BOT"
+            class="underline text-blue-600 hover:text-blue-800 visited:text-purple-600"
+            >https://github.com/darrenthebozz/GGE-BOT</a
+        >
+        <br /><br />
+        Thank you for using this open source software!
+    </p>
+</div>

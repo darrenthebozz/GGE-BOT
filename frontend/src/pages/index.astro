@@ -1,0 +1,46 @@
+---
+import "../styles/global.css";
+import Usermenu from "../components/user-menu.astro";
+import Login from "../components/login.astro";
+import logo from "../img/logo.webp";
+import Welcome from "../components/welcome.astro";
+import { Image } from "astro:assets";
+import Dashboard from "../components/dashboard.vue";
+const isLoggedIn = Astro.cookies.get("uuid");
+---
+
+<html lang="en" class="dark">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" href="/favicon.ico" />
+		<meta name="viewport" content="width=device-width" />
+		<meta name="generator" content={Astro.generator} />
+		<title>Empire Bot</title>
+	</head>
+	<body class="flex flex-col text-center fade-in h-fit scrollbar-color scrollbar-thumb-[#2D2E36] scrollbar-track-[#05040C] scrollbar-thin">
+		<nav
+			class="flex flex-wrap justify-between p-4 w-full items-center"
+		>
+			<a href="/" class="flex space-x-3">
+				<Image src={logo} width={32} alt="Logo" />
+				<span
+					class="text-2xl text-heading font-semibold whitespace-nowrap"
+					>Empire Bot</span
+				>
+			</a>
+			{ isLoggedIn ? <Usermenu/> : <Login/> }
+		</nav>
+		{ isLoggedIn ? <Dashboard client:only="vue"/>: <Welcome/>}
+	</body>
+	<style>
+		html {
+			background-color: #0a0a0f;
+			scroll-behavior: smooth;
+		}
+		body {
+			margin: 0;
+			background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(244,210,137,0.06) 0%, transparent 70%), 
+						radial-gradient(circle at 20% 80%, rgba(100,100,255,0.04) 0%, transparent 50%);
+		}
+	</style>
+</html>
