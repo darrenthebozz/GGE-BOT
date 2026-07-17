@@ -1,10 +1,12 @@
 import { tmpdir } from 'node:os'
 import { EventEmitter } from 'node:events'
-import { mkdir, } from 'node:fs/promises'
+import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
+import { Worker } from 'node:worker_threads'
+
 import EmbeddedPostgres from 'embedded-postgres'
 
-console.debug = 0 ? console.debug : () => { }
+console.debug = 0 ? console.debug : () => {}
 const workingPath = join(tmpdir(), 'ggeBot')
 
 console.log(workingPath)
@@ -81,10 +83,10 @@ subUserEvents.addListener('sub_user_update', payload => {
         (newUser[key] != value && (obj[key] = newUser[key]), obj), {}) : newUser
 
     if (userChanges.state == true)
-        new Worker('./ggeBot.js', { workerData: newUser.id })
+        new Worker('./ggeBot.ts', { workerData: newUser.id })
 })
 client.query('Select * from sub_users').then(({ rows }) => rows.forEach(user =>
-    user.state ? new Worker('./ggeBot.js', { workerData: user.id }) : undefined))
+    user.state ? new Worker('./ggeBot.ts', { workerData: user.id }) : undefined))
 
 export const getSubUser = (uuid : string) => client.query('Select * from sub_users WHERE ownerUUID=$1', [uuid]).then(({ rows }) => rows)
 export const deleteSubUser = (uuid : string, { id } : any) => client.query('DELETE FROM sub_users WHERE ownerUUID=$1 AND id=$2', [uuid, id])

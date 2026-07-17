@@ -2,7 +2,7 @@ import { parentPort } from "node:worker_threads"
 import EventEmitter from "node:events"
 import NodeCache from "node-cache"
 import { RateLimiter } from "limiter"
-import { waitForResult, sendXT, xtHandler, events, status, playerInfo } from "./ggeBot.js"
+import { waitForResult, sendXT, xtHandler, events } from "./ggeBot.js"
 import currencies from "./items/currencies.json"
 import ActionType from "./actions.json"
 import units from "./items/units.json"
@@ -19,7 +19,7 @@ let generals = []
 
 xtHandler.on("gie", obj => generals = obj.G)
 
-function spiralCoordinates(n) {
+function spiralCoordinates(n : Number) {
     if (n === 0) return { x: 0, y: 0 }
 
     const k = Math.ceil((Math.sqrt(n + 1) - 1) / 2)
@@ -76,13 +76,12 @@ const HighscoreType = Object.freeze({
 })
 
 const map = {}
-const registry = new FinalizationRegistry(key => delete map[key])
+const registry = new FinalizationRegistry((key : any) => delete map[key])
 /**
  * @param {GAAAreaInfo} AI 
- * @param {Number} kingdomID 
- * @param {Boolean} shouldEmit
+ * @param {Number} kingdomID
  */
-const MapObject = (AI, kingdomID) => {
+const MapObject = (AI : GAAAreaInfo, kingdomID : Number) => {
     if(kingdomID == undefined)
         return AI
     
@@ -132,9 +131,9 @@ const Crest = o => ({
     backgroundColor1: Number(o.BGC1),
     backgroundColor2: Number(o.BGC2),
     symbolPositionType: Number(o.SPT),
-    symbolType: Number(o.S1),
+    symbolType1: Number(o.S1),
     symbolColor1: Number(o.SC1),
-    symbolType: Number(o.S2),
+    symbolType2: Number(o.S2),
     symbolColor2: Number(o.SC2),
     isSet: Boolean(o.IS)
 })
@@ -143,12 +142,17 @@ const AllianceCrest = o => (o ? {
     colorID: Array.from(o.ACCA ? o.ACCA.ACCS : o.ACFB?.ACCS).map(Number)
 } : undefined)
 class GAAAreaInfo {
-    constructor(o) {
-        this.type = Number(o[0])
-        this.x = Number(o[1])
-        this.y = Number(o[2])
-        this.extraData = Array.from(o).toSpliced(0, 3)
-        this.timeSinceRequest = Number(Date.now())
+    type : Number
+    x : number
+    y : number
+    extraData : any[]
+    timeSinceRequest : number
+    constructor(o : Array<any>) {
+        this.type = o[0]
+        this.x = o[1]
+        this.y = o[2]
+        this.extraData = o.toSpliced(0, 3)
+        this.timeSinceRequest = Date.now()
     }
 }
 const FactionData = o => ({
