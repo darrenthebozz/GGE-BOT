@@ -82,10 +82,8 @@ subUserEvents.addListener('sub_user_update', payload => {
 })
 client.query('Select * from sub_users').then(({ rows }) => row.state ? startBot(uuid, newUser) : undefined)
 
-export const getSubUser = uuid =>
-    client.query('Select * from sub_users WHERE ownerUUID=$1', [uuid]).then(({ rows }) => rows)
-export const deleteSubUser = (uuid, { id }) =>
-    client.query('DELETE FROM sub_users WHERE ownerUUID=$1 AND id=$2', [uuid, id])
+export const getSubUser = uuid => client.query('Select * from sub_users WHERE ownerUUID=$1', [uuid]).then(({ rows }) => rows)
+export const deleteSubUser = (uuid, { id }) => client.query('DELETE FROM sub_users WHERE ownerUUID=$1 AND id=$2', [uuid, id])
 export const insertSubUser = (uuid, { name, loginToken, plugins, state, serverType, server }) =>
     client.query('INSERT INTO sub_users (name, loginToken, plugins, state, serverType, server, ownerUUID) VALUES($1,$2,$3,$4,$5,$6,$7)',
         [name, loginToken, plugins, state, serverType, server, uuid])

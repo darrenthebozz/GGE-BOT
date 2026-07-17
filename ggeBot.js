@@ -1,52 +1,32 @@
-const { isMainThread, workerData : botConfig, parentPort } = require("node:worker_threads")
+import { isMainThread, workerData : botConfig, parentPort } from "node:worker_threads"
 if (isMainThread)
     throw new Error("Run as worker")
 
 process.on("uncaughtException", console.error)
 
-const { getCallSites } = require("node:util")
-const EventEmitter = require("node:events")
-const path = require("node:path")
-const { RateLimiter } = require("limiter")
-const WebSocket = require("ws")
-const { I18n } = require("i18n")
-const ggeConfig = require("./ggeConfig.json")
-const ActionType = require("./actions.json")
-const err = require("./err.json")
+import { getCallSites } from "node:util"
+import EventEmitter from "node:events"
+import path from "node:path"
+
+import { RateLimiter } from "limiter"
+import { I18n } from "i18n"
+
+import ggeConfig from "./ggeConfig.json"
 
 const limiter = new RateLimiter({ tokensPerInterval: 5, interval: "sec" })
 const events = new EventEmitter()
-const xtHandler = new EventEmitter()
+export const xtHandler = new EventEmitter()
 const i18n = new I18n({
     locales: ['en', 'de', 'ar', 'fi', 'he', 'hu', 'pl', 'ro', 'tr', 'cs', 'nl', 'fr'],
-    directory: path.join(__dirname, "website", "public", 'locales'),
+    // directory: path.join(__dirname, ""), TODO: FIXME
     updateFiles: false
 })
 const _console = console
 
 function mngLog(logLevel, msg) {
-    let callSites = getCallSites(6)
-    let scriptName = path.basename(callSites[2]?.scriptName).slice(0, -3)
-    
-    let now = new Date()
-    let hours = now.getHours()
-    let minutes = now.getMinutes()
+    let message = [Date.now(), ['[', `${path.basename(getCallSites(6)[2]?.scriptName).slice(0, -3)}`, '] ', ...(msg.map(m => m instanceof Error ? m.message : m))]]
 
-    hours = hours < 10 ? '0' + hours : hours
-    minutes = minutes < 10 ? '0' + minutes : minutes
-
-    let message = [`[${hours + ':' + minutes}] `, '[', `${scriptName}`, '] ']
-
-    message.push(...msg)
-
-    message = message.map(msg => {
-        if(msg instanceof Error)
-            return msg.message
-
-        return msg
-    })
-
-    _console.log(`[${botConfig.name}] ${message.map(i18n.__).join("")}`)
+    //add to table as [message]
     parentPort.postMessage([ActionType.GetLogs, logLevel, message])
 }
 
@@ -59,15 +39,9 @@ if (!botConfig.internalWorker) {
     console.debug = ggeConfig.debug ? _console.debug : _ => { }
     console.trace = _console.trace
 }
-let requestCount = 0
-async function sendXT(cmdName, paramObj) {
-    try {
-    console.debug(cmdName, JSON.parse(paramObj))
-    } catch {}
-    await limiter.removeTokens(1)
-    requestCount++
-    webSocket.send(`%xt%${botConfig.gameServer}%${cmdName}%1%${paramObj}%`)
-}
+
+export const sendXT = (cmdName, paramObj) =>
+    limiter.removeTokens(1).then(() => ws.send(`%xt%${botConfig.gameServer}%${cmdName}%1%${paramObj}%`))
 
 let importantErrors = 0
 let timedOut = 0
@@ -78,7 +52,7 @@ let timedOut = 0
  * @param {function(object,number)} func 
  * @returns {Promise<[obj: object, result: Number]>}
  */
-const waitForResult = (key, timeout, func) => new Promise((resolve, reject) => {
+export const waitForResult = (key, timeout, func) => new Promise((resolve, reject) => {
     if (timeout == undefined)
         reject(`waitForResult: No timeout specified`)
 
@@ -91,15 +65,15 @@ const waitForResult = (key, timeout, func) => new Promise((resolve, reject) => {
             importantErrors++
         if (importantErrors == 8) {
             console.error("closedReason", "tooManyImportantErrors")
-            return webSocket.pause()
+            return ws.pause()
         }
         if (err[result] == "MOVEMENT_HAS_NO_UNITS") {
             console.error("closedReason", "MOVEMENT_HAS_NO_UNITS")
-            return webSocket.pause()
+            return ws.pause()
         }
         if (err[result] == "CANT_START_NEW_ARMIES") {
             console.error("closedReason", "CANT_START_NEW_ARMIES")
-            return webSocket.pause()
+            return ws.pause()
         }
     }
 
@@ -141,7 +115,7 @@ const waitForResult = (key, timeout, func) => new Promise((resolve, reject) => {
     xtHandler.addListener(key, helperFunction)
 })
 
-const webSocket = new WebSocket(`wss://${botConfig.gameURL}/`, {
+const ws = new WebSocket(`wss://${botConfig.gameURL}/`, {
     skipUTF8Validation: ggeConfig.skipUTF8Validation ? true : false
   })
 
@@ -165,10 +139,6 @@ const playerInfo = {
 }
 
 module.exports = {
-    sendXT,
-    waitForResult,
-    xtHandler,
-    webSocket,
     events,
     botConfig,
     playerInfo,
@@ -176,15 +146,13 @@ module.exports = {
     i18n
 }
 
-webSocket.onopen = () => {
-    webSocket.send('<msg t="sys"><body action="verChk" r="0"><ver v="166"/></body></msg>')
-}
+ws.onopen = () => ws.send('<msg t="sys"><body action="verChk" r="0"><ver v="166"/></body></msg>')
 let errorCount = 0
 
-webSocket.onmessage = ({data : message}) => {
-    message = message.toString()
-    if (message.charAt(0) == "%") {
-        let [,,cmd,, r, obj] = message.split("%")
+ws.onmessage = ({data}) => {
+    data = data.toString()
+    if (data.charAt(0) == "%") {
+        let [,,cmd,, r, obj] = data.split("%")
         const result = Number(r)
         try { obj = JSON.parse(obj) }
         catch(e) {
@@ -210,14 +178,13 @@ webSocket.onmessage = ({data : message}) => {
                 xtHandler.emit(cmd, obj, result)
         }
     }
-
-    else if (message[0] == "<") {
-        switch (message) {
+    else if (data[0] == "<") {
+        switch (data) {
             case "<msg t='sys'><body action='apiOK' r='0'></body></msg>":
-                webSocket.send(`<msg t="sys"><body action="login" r="0"><login z="${botConfig.gameServer}"><nick><![CDATA[]]></nick><pword><![CDATA[undefined%en%0]]></pword></login></body></msg>`)
+                ws.send(`<msg t="sys"><body action="login" r="0"><login z="${botConfig.gameServer}"><nick><![CDATA[]]></nick><pword><![CDATA[undefined%en%0]]></pword></login></body></msg>`)
                 break
             case "<msg t='sys'><body action='joinOK' r='1'><pid id='0'/><vars /><uLs r='1'></uLs></body></msg>":
-                webSocket.send('<msg t="sys"><body action="roundTrip" r="1"></body></msg>')
+                ws.send('<msg t="sys"><body action="roundTrip" r="1"></body></msg>')
                 sendXT("vck", `undefined%web-html5%<RoundHouseKick>%${(Math.random() * Number.MAX_VALUE).toFixed()}`)
                 break
             case "<msg t='sys'><body action='roundTripRes' r='1'></body></msg>":
@@ -225,36 +192,8 @@ webSocket.onmessage = ({data : message}) => {
         }
     }
 }
-webSocket.onerror = () => {
-    events.emit("unload")
-    process.exit(0)
-}
-webSocket.onclose = () => {
-    events.emit("unload")
-    process.exit(0)
-}
 
-events.on("configModified", () => console.log("botConfigReloaded"))
-
-events.once("load", async () => {
-    const { KingdomID, castles } = require("./protocols.js")
-    const castle = castles.find(e => e.kingdomID == KingdomID.stormIslands)
-    function getStormStats() {
-        Object.assign(status, {
-            aquamarin_name: castle.aqua != 0 ? Math.floor(castle.aqua) : undefined,
-            food: castle.food != 0 ? Math.floor(castle.food) : undefined,
-            mead: Math.floor(castle.mead != 0 ? Math.floor(castle.mead) : undefined)
-        })
-        parentPort.postMessage([ActionType.StatusUser, status])
-    }
-    if(!castle)
-        return
-
-    castle.on("resourceUpdate", getStormStats)
-    getStormStats()
-})
-
-xtHandler.on("rlu", () => webSocket.send('<msg t="sys"><body action="autoJoin" r="-1"></body></msg>'))
+xtHandler.on("rlu", () => ws.send('<msg t="sys"><body action="autoJoin" r="-1"></body></msg>'))
 xtHandler.on("gal", obj => {
     playerInfo.alliance.id = Number(obj.AID)
     playerInfo.alliance.rank = Number(obj.R)
@@ -280,52 +219,11 @@ xtHandler.on("gpi", obj => {
     playerInfo.acceptedTOS = Boolean(obj.CTAC)
     playerInfo.isCheater = Boolean(obj.CL)
 })
-xtHandler.on("gcu", obj => {
-    Object.assign(status, {
-        cash: obj.C1 != 0 ? Math.floor(playerInfo.coin = obj.C1) : undefined,
-        gold: obj.C2 != 0 ? Math.floor(playerInfo.rubies = obj.C2) : undefined,
-        requestCount,
-        errorCount
-    })
-    parentPort.postMessage([ActionType.StatusUser, status])
+xtHandler.on("gcu", ({C1, C2}) => {
+    playerInfo.coin = C1
+    playerInfo.rubies = C2
 })
-xtHandler.on("gai", obj => {
-    Object.assign(status, {
-        attackDailyCount: obj.AC != 0 ? Math.floor(playerInfo.attackDailyCount = obj.AC) : undefined,
-    })
-    parentPort.postMessage([ActionType.StatusUser, status])
-})
-parentPort.on("message", async obj => {
-    switch (obj[0]) {
-        case ActionType.SetPluginOptions:
-            function deepCopy(old_, new_) {
-                Object.keys(new_).forEach(key => {
-                    if (typeof new_[key] === "object" && !Array.isArray(new_[key]) && new_[key] !== null)
-                        deepCopy(old_[key], new_[key])
-                    else
-                        old_[key] = new_[key]
-                })
-            }
-            deepCopy(botConfig, obj[1])
-            events.emit("configModified")
-            break
-            break
-        case ActionType.StatusUser:
-            parentPort.postMessage([ActionType.StatusUser, status])
-            break
-        case ActionType.GetExternalEvent:
-            await sendXT("sei", JSON.stringify({}))
-            let [sei, _] = await waitForResult("sei", 1000 * 10)
-            if (sei.E.find(e => e.EID == 113))
-                await sendXT("glt", JSON.stringify({ GST: 3 }))
-            else
-                await sendXT("glt", JSON.stringify({ GST: 2 }))
-            let [glt, _2] = await waitForResult("glt", 1000 * 10)
-            parentPort.postMessage([ActionType.GetExternalEvent, { sei: sei, glt: glt }])
-            break
-
-    }
-})
+xtHandler.on("gai", obj => playerInfo.attackDailyCount = obj.AC)
 
 async function retry() {
     if (botConfig.externalEvent) {
@@ -349,26 +247,6 @@ async function retry() {
             "PLFID": 1
         }))
     }
-    else {
-        sendXT("lli", JSON.stringify({
-            CONM: 212,
-            RTM: 25,
-            ID: 0,
-            PL: 1,
-            NOM: botConfig.name,
-            PW: botConfig.pass,
-            LT: null,
-            LANG: "en",
-            DID: "0",
-            AID: "1745592024940879420",
-            KID: "",
-            REF: "https://empire.goodgamestudios.com",
-            GCI: "",
-            SID: 9,
-            PLFID: 1
-        }))
-    }
-    events.emit("sentLLI")
 }
 xtHandler.on("vck", retry)
 
