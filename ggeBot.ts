@@ -1,45 +1,31 @@
-import { isMainThread, workerData : botConfig, parentPort } from "node:worker_threads"
-if (isMainThread)
-    throw new Error("Run as worker")
-
-process.on("uncaughtException", console.error)
-
+import { isMainThread, workerData as id, parentPort } from "node:worker_threads"
 import { getCallSites } from "node:util"
 import EventEmitter from "node:events"
 import path from "node:path"
-
 import { RateLimiter } from "limiter"
 import { I18n } from "i18n"
-
 import ggeConfig from "./ggeConfig.json"
 
-const limiter = new RateLimiter({ tokensPerInterval: 5, interval: "sec" })
-const events = new EventEmitter()
+process.on("uncaughtException", console.error)
+
+export const events = new EventEmitter()
 export const xtHandler = new EventEmitter()
-const i18n = new I18n({
+export const __ = new I18n({
     locales: ['en', 'de', 'ar', 'fi', 'he', 'hu', 'pl', 'ro', 'tr', 'cs', 'nl', 'fr'],
     // directory: path.join(__dirname, ""), TODO: FIXME
     updateFiles: false
-})
+}).__
 const _console = console
 
 function mngLog(logLevel, msg) {
-    let message = [Date.now(), ['[', `${path.basename(getCallSites(6)[2]?.scriptName).slice(0, -3)}`, '] ', ...(msg.map(m => m instanceof Error ? m.message : m))]]
+    let message = [Date.now(), ['[', `${path.basename(getCallSites(6)[2]?.scriptName).slice(0, -3)}`, '] ', 
+        ...(msg.map(m => m instanceof Error ? m.message : m))]]
 
     //add to table as [message]
     parentPort.postMessage([ActionType.GetLogs, logLevel, message])
 }
 
-if (!botConfig.internalWorker) {
-    console = {}
-    console.log = (...msg) => mngLog(0, msg)
-    console.info = (...msg) => mngLog(0, msg)
-    console.warn = (...msg) => mngLog(1, msg)
-    console.error = (...msg) => mngLog(2, msg)
-    console.debug = ggeConfig.debug ? _console.debug : _ => { }
-    console.trace = _console.trace
-}
-
+const limiter = new RateLimiter({ tokensPerInterval: 5, interval: "sec" })
 export const sendXT = (cmdName, paramObj) =>
     limiter.removeTokens(1).then(() => ws.send(`%xt%${botConfig.gameServer}%${cmdName}%1%${paramObj}%`))
 
@@ -115,10 +101,7 @@ export const waitForResult = (key, timeout, func) => new Promise((resolve, rejec
     xtHandler.addListener(key, helperFunction)
 })
 
-const ws = new WebSocket(`wss://${botConfig.gameURL}/`, {
-    skipUTF8Validation: ggeConfig.skipUTF8Validation ? true : false
-  })
-
+const ws = new WebSocket(`wss://${botConfig.gameURL}/`)
 const status = {}
 const playerInfo = {
     level: NaN,
@@ -136,14 +119,6 @@ const playerInfo = {
         fame: Number(),
         searchingForPlayers: Boolean()
     }
-}
-
-module.exports = {
-    events,
-    botConfig,
-    playerInfo,
-    status,
-    i18n
 }
 
 ws.onopen = () => ws.send('<msg t="sys"><body action="verChk" r="0"><ver v="166"/></body></msg>')
@@ -181,7 +156,7 @@ ws.onmessage = ({data}) => {
     else if (data[0] == "<") {
         switch (data) {
             case "<msg t='sys'><body action='apiOK' r='0'></body></msg>":
-                ws.send(`<msg t="sys"><body action="login" r="0"><login z="${botConfig.gameServer}"><nick><![CDATA[]]></nick><pword><![CDATA[undefined%en%0]]></pword></login></body></msg>`)
+                ws.send(`<msg t="sys"><body action="login" r="0"><login z="${gameServer}"><nick><![CDATA[]]></nick><pword><![CDATA[undefined%en%0]]></pword></login></body></msg>`)
                 break
             case "<msg t='sys'><body action='joinOK' r='1'><pid id='0'/><vars /><uLs r='1'></uLs></body></msg>":
                 ws.send('<msg t="sys"><body action="roundTrip" r="1"></body></msg>')
@@ -203,12 +178,6 @@ xtHandler.on("gal", obj => {
 })
 xtHandler.on("gxp", obj => {
     playerInfo.level = obj.LVL + obj.LL
-
-    if (!botConfig.externalEvent)
-        return
-
-    Object.assign(status, { level: playerInfo.level })
-    parentPort.postMessage([ActionType.StatusUser, status])
 })
 xtHandler.on("gpi", obj => {
     playerInfo.userID = Number(obj.UID)
@@ -225,28 +194,26 @@ xtHandler.on("gcu", ({C1, C2}) => {
 })
 xtHandler.on("gai", obj => playerInfo.attackDailyCount = obj.AC)
 
-async function retry() {
-    if (botConfig.externalEvent) {
-        sendXT("tlep", JSON.stringify({ TLT: botConfig.tempServerData.glt.TLT }))
-    }
-    if (botConfig.lt) {
-        sendXT("lli", JSON.stringify({
-            "CONM": 350,
-            "RTM": 57,
-            "ID": 0,
-            "PL": 1,
-            "NOM": botConfig.name,
-            "LT": botConfig.lt,
-            "LANG": "en",
-            "DID": "0",
-            "AID": "17254677223212351",
-            "KID": "",
-            "REF": "https://empire.goodgamestudios.com",
-            "GCI": "",
-            "SID": 9,
-            "PLFID": 1
-        }))
-    }
+async function retry(TLT) {
+    if (TLT)
+        return sendXT("tlep", JSON.stringify({ TLT }))
+
+    sendXT("lli", JSON.stringify({
+        "CONM": 350,
+        "RTM": 57,
+        "ID": 0,
+        "PL": 1,
+        "NOM": name,
+        "LT": loginToken,
+        "LANG": "en",
+        "DID": "0",
+        "AID": "17254677223212351",
+        "KID": "",
+        "REF": "https://empire.goodgamestudios.com",
+        "GCI": "",
+        "SID": 9,
+        "PLFID": 1
+    }))
 }
 xtHandler.on("vck", retry)
 
@@ -266,21 +233,12 @@ xtHandler.on("lli", async (obj, r) => {
     }
 
     if (r == 0) {
-        //Due to exploits that can break the client this is to give limited access again.
-        const timer = setTimeout(() => {
-            console.warn("loggedIn", "loggedInWithoutEventData")
-            console.warn("featuresMightNotWork")
-            events.emit("load")
-        }, 30 * 1000 * (ggeConfig.timeoutMultiplier ?? 1))
-
         xtHandler.once("sei", () => {
-            parentPort.postMessage([ActionType.Started])
+            setTimeout(events.emit, 4500, "load")
             console.log("loggedIn")
-            setTimeout(() => events.emit("load"), 4500)
-            clearTimeout(timer)
         })
-        events.emit("earlyLoad")
-        setInterval(() => sendXT("pin", "<RoundHouseKick>"), 1000 * 60).unref()
+        
+        setInterval(sendXT, 1000 * 60, "pin", "<RoundHouseKick>").unref()
         return
     }
 
@@ -302,7 +260,7 @@ try {
     require("./plugins/misc.js")
 }
 catch(e) {
-    console.debug(e)
+    console.warn(e)
 }
 
 for (const [, val] of Object.entries(botConfig.plugins)) {

@@ -1,17 +1,17 @@
-const { parentPort } = require("node:worker_threads")
-const EventEmitter = require("node:events")
-const NodeCache = require("node-cache")
-const { RateLimiter } = require("limiter")
-const { waitForResult, sendXT, xtHandler, events, status, playerInfo } = require("./ggeBot.js")
-const currencies = require("./items/currencies.json")
-const ActionType = require("./actions.json")
-const units = require("./items/units.json")
-const effects = require("./items/effects.json")
-const effectTypes = require("./items/effecttypes.json")
-const effectCaps = require("./items/effectCaps.json")
-const generalSkills = require("./items/generalSkills.json")
-const relicEffects = require("./items/relicEffects.json")
-const equipmentEffects = require("./items/equipment_effects.json")
+import { parentPort } from "node:worker_threads"
+import EventEmitter from "node:events"
+import NodeCache from "node-cache"
+import { RateLimiter } from "limiter"
+import { waitForResult, sendXT, xtHandler, events, status, playerInfo } from "./ggeBot.js"
+import currencies from "./items/currencies.json"
+import ActionType from "./actions.json"
+import units from "./items/units.json"
+import effects from "./items/effects.json"
+import effectTypes from "./items/effecttypes.json"
+import effectCaps from "./items/effectCaps.json"
+import generalSkills from "./items/generalSkills.json"
+import relicEffects from "./items/relicEffects.json"
+import equipmentEffects from "./items/equipment_effects.json"
 
 const myCache = new NodeCache({useClones : false})
 
@@ -74,8 +74,6 @@ const AreaType = Object.freeze({
 const HighscoreType = Object.freeze({
     honour: 5
 })
-
-// xtHandler.on("earlyLoad", () => sendXT("sce", "{}"))
 
 const map = {}
 const registry = new FinalizationRegistry(key => delete map[key])
