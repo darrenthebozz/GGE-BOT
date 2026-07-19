@@ -20,7 +20,6 @@ const activePlugins = [
   "Butt face :P",
 ];
 const resources = Object.entries(player.resources).map(([name, amount]) => ({ name, amount }))
-//[{ wodID: 1, amount: 32 }, { wodID: 1, amount: 32 }, { wodID: 1, amount: 32 }, { wodID: 1, amount: 32 }, { wodID: 1, amount: 32 }, { wodID: 1, amount: 32 }, { wodID: 1, amount: 32 }, { wodID: 1, amount: 32 }, { wodID: 1, amount: 32 }, { wodID: 1, amount: 32 }, { wodID: 1, amount: 32 }, { wodID: 1, amount: 32 }, { wodID: 1, amount: 32 }, { wodID: 1, amount: 32 }, { wodID: 1, amount: 32 }, { wodID: 1, amount: 32 }, { wodID: 1, amount: 32 }, { wodID: 1, amount: 32 }, { wodID: 1, amount: 32 }, { wodID: 1, amount: 32 }, { wodID: 1, amount: 32 }, { wodID: 1, amount: 32 }, { wodID: 1, amount: 32 }, { wodID: 1, amount: 32 }, { wodID: 1, amount: 32 }, { wodID: 1, amount: 32 }, { wodID: 1, amount: 32 }, { wodID: 1, amount: 32 }, { wodID: 1, amount: 32 }, { wodID: 1, amount: 32 }, { wodID: 1, amount: 32 }, { wodID: 1, amount: 32 }, { wodID: 1, amount: 32 }, { wodID: 1, amount: 32 }, { wodID: 1, amount: 32 }, { wodID: 1, amount: 32 }, { wodID: 1, amount: 32 }, { wodID: 1, amount: 32 }, { wodID: 1, amount: 32 }, { wodID: 1, amount: 32 }]
 const activeTab = ref("0")
 const capitalizeFirstLetter = o =>
   String(o).charAt(0).toLocaleUpperCase() + String(o).slice(1)
