@@ -13,6 +13,7 @@
     "npm-check-updates": "^22.2.9",
     "pretty-time": "^1.1.0",
     "pureimage": "^0.4.20",
+    "secure-json-parse": "^4.1.0",
     "sharp": "^0.35.3",
     "turl": "^1.1.2",
     "undici": "^8.7.0",

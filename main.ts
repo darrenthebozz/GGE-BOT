@@ -7,17 +7,25 @@ import http from 'node:http'
 import EmbeddedPostgres from 'embedded-postgres'
 import { WebSocketServer, WebSocket } from 'ws'
 import express from 'express'
+import { safeParse } from 'secure-json-parse'
+
 import { handler as ssrHandler } from './frontend/dist/server/entry.mjs'
 import IterableWeakMap from './modules/IterableWeakMap'
+enum UserAction {
+    add,
+    change,
+    delete
+}
 interface User {
-    state : boolean,
     id : number,
     ownerUUID : string,
+    name : string,
+    loginToken : string,
+    plugins : { [key: string] : { state : number } & any }
+    state : boolean,
+    serverType : 'default' | 'horizon' | 'outerRealm'
+    server : number
     [key: string] : any
-}
-
-enum State {
-    UserChange
 }
 
 console.debug = 0 ? console.debug : () => {}
@@ -58,15 +66,17 @@ subUserEvents.addListener('sub_user_update', payload => {
     if (userChanges.state == true)
         new Worker('./ggeBot.ts', { workerData: newUser.id })
     
-    activeUsers[newUser.ownerUUID]?.forEach(ws => 
-        ws.send([State.UserChange, userChanges]))
+    activeUsers[newUser.ownerUUID]?.forEach(ws => ws.send([UserAction.change, userChanges]))
 })
 
 client.query('Select * from sub_users').then(({ rows } : any) => rows.forEach((user : User) =>
     user.state ? new Worker('./ggeBot.ts', { workerData: user.id }) : undefined))
 
-const getSubUser = (uuid : string) => client.query('Select * from sub_users WHERE ownerUUID=$1', [uuid]).then(({ rows }) => rows)
-const deleteSubUser = (uuid : string, { id } : any) => client.query('DELETE FROM sub_users WHERE ownerUUID=$1 AND id=$2', [uuid, id])
+const getSubUser = (uuid : string, id? : number) =>
+    id == undefined ?
+    client.query('Select * from sub_users WHERE ownerUUID=$1', [uuid]).then(({ rows }) => rows) :
+    client.query('Select * from sub_users WHERE ownerUUID=$1 AND id=$2', [uuid, id]).then(({ rows }) => rows?.[0])
+
 const insertSubUser = (uuid : string, { name, loginToken, plugins, state, serverType, server } : any) =>
     client.query('INSERT INTO sub_users (name, loginToken, plugins, state, serverType, server, ownerUUID) VALUES($1,$2,$3,$4,$5,$6,$7)',
         [name, loginToken, plugins, state, serverType, server, uuid])
@@ -90,7 +100,27 @@ wss.addListener('connection', async (ws, { headers }) => {
     activeUsers[uuid] ??= new IterableWeakMap()
     activeUsers[uuid].set(ws, ws)
 
-    ws.addEventListener("message", (data) => {
-        
+    ws.addEventListener("message", async ({data}) => {
+        const [action, obj] : [UserAction, any] = safeParse(data.toString())
+
+        switch (action) {
+            case UserAction.add: {
+                const { name, loginToken, plugins, state, serverType, server } = Object.assign(await getSubUser(uuid, obj), obj) as User
+
+                client.query('UPDATE sub_users SET name=$1, loginToken=$2, plugins=$3, state=$4, serverType=$5, server=$6, ownerUUID WHERE uuid=$7 AND id=$8',
+                    [name, loginToken, plugins, state, serverType, server, uuid])
+                break
+            }
+            case UserAction.change: { 
+                const { name, loginToken, plugins, state, serverType, server } = Object.assign(await getSubUser(uuid, obj), obj) as User
+
+                client.query('UPDATE sub_users SET name=$1, loginToken=$2, plugins=$3, state=$4, serverType=$5, server=$6, ownerUUID WHERE uuid=$7 AND id=$8',
+                    [name, loginToken, plugins, state, serverType, server, uuid])
+                break
+            }
+            case UserAction.delete:
+                client.query('DELETE FROM sub_users WHERE ownerUUID=$1 AND id=$2', [uuid, obj])
+                break
+        }
     })
 })
