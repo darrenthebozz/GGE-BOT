@@ -10,6 +10,7 @@ import { initFlowbite } from 'flowbite'
 import { FwbButton, FwbModal } from 'flowbite-vue'
 import ReconnectingWebSocket from "reconnecting-websocket"
 
+import UserAction from '../../../modules/EUserAction.ts'
 import SubUser from "./sub-user.vue"
 import Settings from "./subuser-settings.vue"
 
@@ -21,27 +22,14 @@ const users = ref([])
 const closeModal = () => isShowModal.value = false
 const showModal = () => isShowModal.value = true
 
-const ws = new ReconnectingWebSocket(`${window.location.protocol === 'https:' ? "wss" : "ws"}://${window.location.hostname}:${window.location.port}`, [], { WebSocket: WebSocket, minReconnectionDelay: 3000 })
-
-enum ActionType {
-  GetUsers,
-  Error
-}
+const ws = new ReconnectingWebSocket(`//${window.location.hostname}:${8080 ?? window.location.port}`, [], { WebSocket, minReconnectionDelay: 3000 })
 
 ws.addEventListener("message", ({ data }: any) => {
   const [action, ...obj] = JSON.parse(data.toString())
   switch (action) {
-    case ActionType.GetUsers:
+    case UserAction.get:
       console.log(obj)
       users.value = obj[0]
-      break
-    case ActionType.Error:
-      switch (obj[0]) {
-        case "unauthenticated":
-          window.location.href = "/"
-        default:
-        //print error
-      }
       break
   }
 })
@@ -55,7 +43,7 @@ ws.addEventListener("close", ({ code }) => {
 
 </script>
 <template>
-  <fwb-button @click="showModal" color="transparent"
+  <fwb-button @click="showModal"
     class="p-2 md:p-4 text-heading text-sm border border-default rounded-base shadow w-full"><svg
       xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
       class="size-6 ml-auto hover:text-blue-600">

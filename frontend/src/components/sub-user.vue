@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import CastleView from "./castle-view.vue";
 // import player from "../test-data.json";
 const { player } = defineProps(['player'])

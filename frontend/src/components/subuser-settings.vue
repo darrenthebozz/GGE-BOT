@@ -1,5 +1,5 @@
-<script setup>
-import { ref } from 'vue'
+<script setup lang="ts">
+import { ref, shallowRef } from 'vue'
 import {
     FwbTab,
     FwbTabs,
@@ -15,6 +15,7 @@ const username = ref('')
 const password = ref('')
 const log = ref()
 const server = ref(1)
+const evaluatingInstances = shallowRef(false)
 const instances = computedAsync(async () => {
     const lang = await (await fetch("/lang/en")).json()
     const servers = new DOMParser().parseFromString(await (await fetch("/server")).text(), "application/xml")
@@ -22,23 +23,30 @@ const instances = computedAsync(async () => {
     return Array.from(servers.getElementsByTagName("instance") ?? []).map(obj => {
         const nodes = Array.from(obj.childNodes)
 
-        const instanceLocaId = nodes.find(({ nodeName }) => nodeName == "instanceLocaId").childNodes[0].nodeValue ?? ""
-        const instanceName = nodes.find(({ nodeName }) => nodeName == "instanceName").childNodes[0].nodeValue ?? ""
+        const instanceLocaId = nodes.find(({ nodeName }) => nodeName == "instanceLocaId")?.childNodes[0].nodeValue ?? ""
+        const instanceName = nodes.find(({ nodeName }) => nodeName == "instanceName")?.childNodes[0].nodeValue ?? ""
 
         return {
             value: obj.getAttribute("value") ?? "",
             name: lang[instanceLocaId] + ' ' + instanceName,
-            zone: nodes.find(({ nodeName }) => nodeName == "zone").childNodes[0].nodeValue ?? "",
-            server: nodes.find(({ nodeName }) => nodeName == "server").childNodes[0].nodeValue ?? "",
+            zone: nodes.find(({ nodeName }) => nodeName == "zone")?.childNodes[0].nodeValue ?? "",
+            server: nodes.find(({ nodeName }) => nodeName == "server")?.childNodes[0].nodeValue ?? "",
         }
     })
-})
+}, null, evaluatingInstances)
 
 const currentPage = ref(1)
 
 const currentUserData = ref()
 const validateUser = () => new Promise((resolve, reject) => {
-    const { zone, server: gameURL } = instances.value.find(({ value }) => server.value == value)
+    if(instances.value == undefined)
+        return
+
+    const { zone, server : gameURL } = instances.value.find(({ value }) => server.value == Number(value)) ?? {} as { zone : string, server : string }
+    
+    if(zone == undefined || gameURL == undefined)
+        return
+
     const userData = {"castles":[{"areaInfo":{"type":4,"x":562,"y":589,"extraData":[3695878,3900163,5,5,5,5,5,"Outpost Xolotl",0,0,-1,6,-1,0,0,[],0],"timeSinceRequest":1781867280554},"id":3695878,"abandonOutpostTime":null,"abandonOutpostTimeCooldown":0,"kingdomID":0},{"areaInfo":{"type":1,"x":641,"y":590,"extraData":[3780245,3900163,4,4,4,4,5,"Change",0,0,-1,-1,-1,0,0,[],0],"timeSinceRequest":1781867280554},"id":3780245,"abandonOutpostTime":-1,"abandonOutpostTimeCooldown":-1,"kingdomID":0},{"areaInfo":{"type":12,"x":582,"y":716,"extraData":[3784579,3900163,3,2,1,1,0,"Castle Xolotl",0,0,-1,-1,-1,1,0,[],0],"timeSinceRequest":1781867280554},"id":3784579,"abandonOutpostTime":-1,"abandonOutpostTimeCooldown":-1,"kingdomID":1},{"areaInfo":{"type":12,"x":662,"y":703,"extraData":[3780406,3900163,3,3,3,1,0,"Castle Xolotl",0,0,-1,-1,-1,2,0,[],0],"timeSinceRequest":1781867280554},"id":3780406,"abandonOutpostTime":-1,"abandonOutpostTimeCooldown":-1,"kingdomID":2},{"areaInfo":{"type":12,"x":664,"y":631,"extraData":[3784887,3900163,3,2,2,1,0,"Castle Xolotl",0,0,-1,-1,-1,3,0,[],0],"timeSinceRequest":1781867280554},"id":3784887,"abandonOutpostTime":-1,"abandonOutpostTimeCooldown":-1,"kingdomID":3},{"areaInfo":{"type":12,"x":704,"y":652,"extraData":[1775,3900163,1,3,3,3,0,"Castle Xolotl",0,0,-1,-1,-1,4,0,[],0],"timeSinceRequest":1781867280554},"id":1775,"abandonOutpostTime":-1,"abandonOutpostTimeCooldown":-1,"kingdomID":4}],"user":{"level":69,"userID":236872,"playerID":3900163,"email":"xolotlGGE@outlook.com","acceptedTOS":1,"verifiedEmail":0,"isCheater":0,"name":"Xolotl","alliance":{"id":57639,"rank":8,"name":"GOLDEN REALM","fame":3836569343,"searchingForPlayers":false}}}
     return resolve(currentUserData.value = userData)
     console.log(`username:${username.value}`)
@@ -47,14 +55,14 @@ const validateUser = () => new Promise((resolve, reject) => {
     console.log(`gameURL:${gameURL}`)
 
     const loginEvents = login(username.value, password.value, zone, gameURL)
-    loginEvents.addEventListener("TIMEOUT", ({ detail: timeout }) => {
+    loginEvents.addEventListener("TIMEOUT", ({ detail: timeout } : any) => {
         log.value = {
             type: "TIMEOUT",
             value: timeout
         }
         console.log(timeout)
     })
-    loginEvents.addEventListener("ERROR", ({ detail: { r } }) => {
+    loginEvents.addEventListener("ERROR", ({ detail: { r } } : any) => {
         switch (r) {
             case 21:
                 log.value = `User not found`
@@ -64,7 +72,7 @@ const validateUser = () => new Promise((resolve, reject) => {
         }
         reject()
     })
-    loginEvents.addEventListener("LOGGEDIN", ({ detail }) => {
+    loginEvents.addEventListener("LOGGEDIN", ({ detail } : any) => {
         currentUserData.value = detail
         console.log(JSON.stringify(detail))
         resolve()
@@ -72,7 +80,6 @@ const validateUser = () => new Promise((resolve, reject) => {
 })
 const totalPages = 2
 const activeTab = ref("0")
- 
 </script>
 <template>
     <div class="flex flex-col border-b border-default pb-4 md:pb-5 text-left" v-show="currentPage == 1">
@@ -88,7 +95,7 @@ const activeTab = ref("0")
                 class="bg-neutral-secondary-medium border border-default-medium text-heading text-sm rounded-base focus:ring-brand focus:border-brand block w-full px-3 py-2.5 shadow-xs placeholder:text-body"
                 placeholder="••••••••" required />
         </div>
-        <fwb-select v-model="server" :options="instances" label="Server" class="p-2 pt-0 min-w-fit" placeholder required
+        <fwb-select v-if="evaluatingInstances" v-model="server" :options="instances" label="Server" class="p-2 pt-0 min-w-fit" placeholder required
             selectClass="bg-neutral-secondary-medium border border-default-medium text-heading text-sm rounded-base focus:ring-brand focus:border-brand block w-full px-3 py-2.5 shadow-xs placeholder:text-body" />
         <fwb-alert v-if="typeof log === 'string'" type="danger" class="mr-2 ml-2 mt-1">
             {{ log }}

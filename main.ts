@@ -8,27 +8,13 @@ import EmbeddedPostgres from 'embedded-postgres'
 import { WebSocketServer, WebSocket } from 'ws'
 import express from 'express'
 import { safeParse } from 'secure-json-parse'
-
 import { handler as ssrHandler } from './frontend/dist/server/entry.mjs'
 import IterableWeakMap from './modules/IterableWeakMap.ts'
-
-const UserAction = { add: 0, change: 1, delete: 2, get: 3 }
-interface User {
-    id: number,
-    ownerUUID: string,
-    name: string,
-    loginToken: string,
-    plugins: { [key: string]: { state: boolean } & any }
-    state: boolean,
-    serverType: 'default' | 'horizon' | 'outerRealm' | 'outerRealm&horizon'
-    server: number
-    [key: string]: any
-}
+import type IUser from './modules/IUser.ts'
+import UserAction from './modules/EUserAction.ts'
 
 console.debug = 1 ? console.debug : () => { }
 const workingPath = join(tmpdir(), 'ggeBot')
-
-console.log(workingPath)
 try { await mkdir(workingPath) } catch (e) { console.debug(e) }
 const databaseDir = join(workingPath, './db')
 const pg = new EmbeddedPostgres({
@@ -37,9 +23,9 @@ const pg = new EmbeddedPostgres({
     persistent: true,
     onLog: console.debug
 })
-
 let databaseInitialised = false
 
+console.log(workingPath)
 try { await pg.initialise(); databaseInitialised = true } catch (e) { console.debug(e) }
 await pg.start()
 
@@ -52,7 +38,7 @@ if (databaseInitialised)
 await client.query(`LISTEN sub_user_update`)
 client.addListener('notification', ({ channel, payload }: any) => subUserEvents.emit(channel, payload))
 subUserEvents.addListener('sub_user_update', payload => {
-    const [oldUser, newUser] = JSON.parse(payload) as [User, User]
+    const [oldUser, newUser] = JSON.parse(payload) as [IUser, IUser]
     const userChanges = oldUser ? Object.entries(oldUser).reduce((obj: any, [key, value]) =>
         (newUser[key] != value && (obj[key] = newUser[key]), obj), {}) : newUser
 
@@ -64,7 +50,7 @@ subUserEvents.addListener('sub_user_update', payload => {
     activeUsers[newUser.ownerUUID]?.forEach(ws => ws.send([UserAction.change, userChanges]))
 })
 
-client.query('Select id, state from sub_users').then(({ rows }: any) => rows.forEach(({ id, state }: { id: number, state: boolean }) =>
+await client.query('Select id, state from sub_users').then((r : any) => r.rows.forEach(({ id, state }: { id: number, state: boolean }) =>
     state ? new Worker('./ggeBot.ts', { workerData: id }) : undefined))
 
 const wss = new WebSocketServer({ noServer: true })
@@ -76,7 +62,7 @@ http.createServer({}, app).listen(8080).on('upgrade', (req, socket, head) => wss
 wss.addListener('connection', async (ws, { headers }) => {
     const uuid = headers.cookie?.split('; ').find(e => e.startsWith('uuid='))?.substring(5, Infinity)
 
-    if (!uuid || !await client.query('Select uuid from users WHERE uuid=$1', [uuid]).then(({ rows }: any) => rows[0]?.uuid))
+    if (!uuid || !await client.query('Select uuid from users WHERE uuid=$1', [uuid]).then((r : any) => r.rows[0]?.uuid))
         return ws.close(4000)
 
     activeUsers[uuid] ??= new IterableWeakMap()
@@ -90,13 +76,13 @@ wss.addListener('connection', async (ws, { headers }) => {
         switch (action) {
             case UserAction.add:
                 await client.query('INSERT INTO sub_users(name, loginToken, plugins, serverType, server, ownerUUID) VALUES($1,$2,$3,$4,$5,$6)',
-                    Object.values(obj satisfies User))
+                    Object.values(obj satisfies IUser))
                 break
             case UserAction.change:
                 await client.query('UPDATE sub_users SET name=$1, loginToken=$2, plugins=$3, state=$4, serverType=$5, server=$6, ownerUUID WHERE uuid=$7 AND id=$8',
                     Object.values(Object.assign(await client.query(
-                        'Select name, loginToken, plugins, state, serverType, server, id from sub_users WHERE ownerUUID=$1 AND id=$2', 
-                        [uuid, obj.id]).then((r: any) => r.rows[0]), obj satisfies User)))
+                        'Select name, loginToken, plugins, state, serverType, server from sub_users WHERE ownerUUID=$1 AND id=$2', 
+                        [uuid, obj.id]).then((r: any) => r.rows[0]), obj satisfies IUser)))
                 break
             case UserAction.delete:
                 await client.query('DELETE FROM sub_users WHERE ownerUUID=$1 AND id=$2', [uuid, obj satisfies number])
