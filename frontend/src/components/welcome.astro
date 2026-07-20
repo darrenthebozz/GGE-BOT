@@ -1,11 +1,13 @@
 ---
-import logo from "../img/logo.webp";
-import { Image } from "astro:assets";
 export const prerender = true;
 ---
 
 <div class="h-full">
-    <Image src={logo} alt="Logo" class="m-auto" />
+    <img
+        class="w-10 h-10 rounded-full m-auto"
+        src="https://avatars.githubusercontent.com/u/37853306?v=4&size=64"
+        alt="Rounded avatar"
+    />
     <h1
         class="text-3xl font-bold text-gray-900 sm:text-5xl sm:tracking-tight dark:text-white p-4"
     >

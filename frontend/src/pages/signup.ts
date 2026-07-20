@@ -2,11 +2,16 @@ import type { APIRoute } from 'astro'
 import client from '../components/database'
 
 export const prerender = false
-export const GET: APIRoute = async ({params : { name, password }}) => {
-  try { //The only reason this can throw is because of username restraint
-    return new Response(await client.query('INSERT INTO Users (name, passwordHash) VALUES($1, $2)', [name, password]).then(row => row.rows[0].uuid) as string, {status: 201})
+export const GET: APIRoute = async ({ clientAddress, params: { name, password } }) => {
+  if (name == undefined || password == undefined) {
+    console.warn(new Error(`[${clientAddress}] Undefined field/s`))
+    return new Response(null, { status: 400 })
   }
-  catch(e) {
+
+  try { //The only reason this can throw is because of username restraint
+    return new Response(await client.query('INSERT INTO Users (name, passwordHash) VALUES($1, $2)', [name, password]).then(row => row.rows[0].uuid) as string, { status: 201 })
+  }
+  catch (e) {
     console.debug(e)
     return new Response(null, { status: 409 })
   }

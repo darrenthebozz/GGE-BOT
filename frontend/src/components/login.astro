@@ -51,10 +51,7 @@ export const prerender = true;
                 required
             />
         </div>
-        <label
-            for="remember-me"
-            class="flex items-center mb-5"
-        >
+        <label for="remember-me" class="flex items-center mb-5">
             <input
                 id="remember-me"
                 name="agreedToTerms"
@@ -63,10 +60,7 @@ export const prerender = true;
                 class="w-4 h-4 border border-default-medium rounded-xs bg-neutral-secondary-medium focus:ring-2 focus:ring-brand-soft"
                 required
             />
-            <div class="ms-2 text-sm text-heading select-none">
-                Remember me
-            </div>
-            
+            <div class="ms-2 text-sm text-heading select-none">Remember me</div>
         </label>
         <button
             type="submit"
@@ -79,17 +73,51 @@ export const prerender = true;
 <script>
     import { Dropdown, DropdownOptions } from "flowbite";
 
-    function signUp(username : string, password : string, rememberMe : string) {
+    async function signUp(name: string, password: string, rememberMe: string) {
+        const { uuid, status } = await fetch("/signup", {
+            method: "GET",
+            body: JSON.stringify({ name, password }),
+        }).then(async (r) => ({ uuid: await r.text(), status: r.status }));
 
+        switch (status) {
+            case 202: //Logged In
+                if (rememberMe)
+                    document.cookie = `uuid=${uuid};max-age=31536000`;
+                else document.cookie = `uuid=${uuid}`;
+                break;
+            case 401: //Login Failed
+                break;
+            case 400: //Error Occured
+        }
     }
-    function login(username : string, password : string, rememberMe : string) {
+    async function signIn(name: string, password: string, rememberMe: string) {
+        const { uuid, status } = await fetch("/signin", {
+            method: "GET",
+            body: JSON.stringify({ name, password }),
+        }).then(async (r) => ({ uuid: await r.text(), status: r.status }));
 
+        switch (status) {
+            case 202: //Logged In
+                if (rememberMe)
+                    document.cookie = `uuid=${uuid};max-age=31536000`;
+                else document.cookie = `uuid=${uuid}`;
+                break;
+            case 401: //Login Failed
+                break;
+            case 400: //Error Occured
+        }
     }
-    
-    const $targetEl = document.getElementById("user-menu-dropdown") as HTMLElement;
-    const $triggerEl = document.getElementById("dropdown-button") as HTMLElement;
+
+    const $targetEl = document.getElementById(
+        "user-menu-dropdown",
+    ) as HTMLElement;
+    const $triggerEl = document.getElementById(
+        "dropdown-button",
+    ) as HTMLElement;
     const $button = document.getElementById("user-toggle") as HTMLElement;
-    const $submitButton = document.getElementById("submit-button") as HTMLElement;
+    const $submitButton = document.getElementById(
+        "submit-button",
+    ) as HTMLElement;
 
     const LoginUIState = {
         signIn: "Sign In",
@@ -103,37 +131,37 @@ export const prerender = true;
         delay: 300,
         ignoreClickOutsideClass: true,
         onShow: () =>
-            $submitButton.innerHTML === LoginUIState.signUp && toggleButton()
+            $submitButton.innerHTML === LoginUIState.signUp && toggleButton(),
     };
 
     const dropDown = new Dropdown($targetEl, $triggerEl, options);
     dropDown.show();
 
-    const toggleButton = $button.onclick = () => {
+    const toggleButton = ($button.onclick = () => {
         [$submitButton.innerHTML, $button.innerHTML] =
             $submitButton.innerHTML === LoginUIState.signIn
                 ? [LoginUIState.signUp, LoginUIState.signIn]
                 : [LoginUIState.signIn, LoginUIState.signUp];
         dropDown.init();
-    };
+    });
 
     const $userForm = document.getElementById("user-form") as HTMLFormElement;
     $userForm.addEventListener("submit", async function (event) {
         event.preventDefault();
         const formData = new FormData($userForm);
         if ($submitButton.innerHTML === LoginUIState.signIn) {
-            await login(formData.get("username") as string, 
-                  formData.get("password") as string,
-                  formData.get("rememberMe") as string);
-                
-            window.location.replace("/");
+            await signIn(
+                formData.get("username") as string,
+                formData.get("password") as string,
+                formData.get("rememberMe") as string,
+            );
+        } else {
+            await signUp(
+                formData.get("username") as string,
+                formData.get("password") as string,
+                formData.get("rememberMe") as string,
+            );
         }
-        else {
-            await signUp(formData.get("username") as string, 
-                  formData.get("password") as string,
-                  formData.get("rememberMe") as string)
-
-            window.location.replace("/");
-        }
+        window.location.replace("/");
     });
 </script>

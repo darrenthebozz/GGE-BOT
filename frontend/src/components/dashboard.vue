@@ -5,12 +5,12 @@
 @source "../../node_modules/flowbite-vue";
 </style>
 <script setup lang="ts">
+import { onMounted, ref } from 'vue'
 import { initFlowbite } from 'flowbite'
 import { FwbButton, FwbModal } from 'flowbite-vue'
 import ReconnectingWebSocket from "reconnecting-websocket"
 
 import SubUser from "./sub-user.vue"
-import { onMounted, ref } from 'vue'
 import Settings from "./subuser-settings.vue"
 
 onMounted(initFlowbite)
@@ -21,7 +21,7 @@ const users = ref([])
 const closeModal = () => isShowModal.value = false
 const showModal = () => isShowModal.value = true
 
-const ws = new ReconnectingWebSocket(`${window.location.protocol === 'https:' ? "wss" : "ws"}://${window.location.hostname}:${3001 ?? window.location.port}`, [], { WebSocket: WebSocket, minReconnectionDelay: 3000 })
+const ws = new ReconnectingWebSocket(`${window.location.protocol === 'https:' ? "wss" : "ws"}://${window.location.hostname}:${window.location.port}`, [], { WebSocket: WebSocket, minReconnectionDelay: 3000 })
 
 enum ActionType {
   GetUsers,
@@ -38,13 +38,14 @@ ws.addEventListener("message", ({data} : any) => {
       case ActionType.Error:
       switch(obj[0]) {
         case "unauthenticated":
-          window.location.href = "signin.html"
+          window.location.href = "/"
         default:
           //print error
       } 
       break
   }
 })
+// ws.onclose()
 
 </script>
 <template>

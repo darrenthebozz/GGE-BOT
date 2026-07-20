@@ -10,9 +10,13 @@ import express from 'express'
 import { safeParse } from 'secure-json-parse'
 
 import { handler as ssrHandler } from './frontend/dist/server/entry.mjs'
-import IterableWeakMap from './modules/IterableWeakMap'
+import IterableWeakMap from './modules/IterableWeakMap.ts'
 
-enum UserAction { add, change, delete }
+const UserAction = {
+    add : 0,
+    change : 1,
+    delete : 2
+}
 interface User {
     id: number,
     ownerUUID: string,
@@ -80,14 +84,14 @@ http.createServer({}, app).listen(8080).on('upgrade', (req, socket, head) => wss
 wss.addListener('connection', async (ws, { headers }) => {
     const uuid = headers.cookie?.split('; ').find(e => e.startsWith('uuid='))?.substring(5, Infinity)
 
-    if (!uuid || !!await getSubUser(uuid).then(u => u.length))
+    if (!uuid || !await getSubUser(uuid).then(u => u.length))
         return ws.close(4000)
 
     activeUsers[uuid] ??= new IterableWeakMap()
     activeUsers[uuid].set(ws, ws)
 
     ws.addEventListener("message", async ({ data }) => {
-        const [action, obj]: [UserAction, any] = safeParse(data.toString())
+        const [action, obj]: [number, any] = safeParse(data.toString())
 
         switch (action) {
             case UserAction.add: {
@@ -98,10 +102,10 @@ wss.addListener('connection', async (ws, { headers }) => {
                 break
             }
             case UserAction.change: {
-                const { name, loginToken, plugins, state, serverType, server } = Object.assign(await getSubUser(uuid, obj.id), obj satisfies User) as User
+                const { name, loginToken, plugins, state, serverType, server, id } = Object.assign(await getSubUser(uuid, obj.id), obj satisfies User) as User
 
                 await client.query('UPDATE sub_users SET name=$1, loginToken=$2, plugins=$3, state=$4, serverType=$5, server=$6, ownerUUID WHERE uuid=$7 AND id=$8',
-                    [name, loginToken, plugins, state, serverType, server, uuid])
+                    [name, loginToken, plugins, state, serverType, server, uuid, id])
                 break
             }
             case UserAction.delete:

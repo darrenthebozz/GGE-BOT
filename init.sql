@@ -45,8 +45,8 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 CREATE TABLE users (
     uuid TEXT NOT NULL DEFAULT uuidv7(),
     name TEXT NOT NULL UNIQUE,
-    passwordHash TEXT NOT NULL
-    discordUserId TEXT
+    passwordHash TEXT NOT NULL,
+    discordUserId TEXT,
     discordGuildId TEXT
 );
 
