@@ -17,11 +17,12 @@
     "secure-json-parse": "^4.1.0",
     "sharp": "^0.35.3",
     "turl": "^1.1.2",
-    "undici": "^8.7.0",
+    "undici": "^8.8.0",
     "ws": "^8.21.1",
     "xml2js": "^0.6.2"
   },
   "devDependencies": {
+    "@types/express": "^5.0.6",
     "@types/node": "^26.1.1"
   }
 }
