@@ -29,7 +29,7 @@ interface User {
     [key: string]: any
 }
 
-console.debug = 0 ? console.debug : () => { }
+console.debug = 1 ? console.debug : () => { }
 const workingPath = join(tmpdir(), 'ggeBot')
 
 console.log(workingPath)

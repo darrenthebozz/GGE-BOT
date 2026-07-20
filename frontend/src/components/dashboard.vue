@@ -28,24 +28,30 @@ enum ActionType {
   Error
 }
 
-ws.addEventListener("message", ({data} : any) => {
+ws.addEventListener("message", ({ data }: any) => {
   const [action, ...obj] = JSON.parse(data.toString())
   switch (action) {
-      case ActionType.GetUsers:
-        console.log(obj)
-          users.value = obj[0]
-          break
-      case ActionType.Error:
-      switch(obj[0]) {
+    case ActionType.GetUsers:
+      console.log(obj)
+      users.value = obj[0]
+      break
+    case ActionType.Error:
+      switch (obj[0]) {
         case "unauthenticated":
           window.location.href = "/"
         default:
-          //print error
-      } 
+        //print error
+      }
       break
   }
 })
-// ws.onclose()
+
+ws.addEventListener("close", ({ code }) => {
+  if (code == 4000) {
+    document.cookie = `uuid=`
+    window.location.replace("/")
+  }
+})
 
 </script>
 <template>
@@ -60,8 +66,7 @@ ws.addEventListener("message", ({data} : any) => {
     <SubUser :user="user" />
   </span>
   <fwb-modal @close="closeModal" v-show="isShowModal" header-class="bg-neutral-primary-soft"
-    bodyClass="bg-neutral-primary-soft text-white text-right" size="5xl"
-    wrapper-class="max-w-svw md:m-4 m-0">
+    bodyClass="bg-neutral-primary-soft text-white text-right" size="5xl" wrapper-class="max-w-svw md:m-4 m-0">
     <template #body>
       <Settings :close="closeModal" />
     </template>
