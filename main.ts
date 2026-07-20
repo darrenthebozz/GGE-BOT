@@ -83,7 +83,7 @@ wss.addListener('connection', async (ws, { headers }) => {
     activeUsers[uuid] ??= new IterableWeakMap()
     activeUsers[uuid].set(ws, ws)
 
-    ws.send(JSON.stringify([UserAction.get, ...await client.query('Select * from sub_users WHERE ownerUUID=$1', [uuid]).then((q: any) => q.rows)]))
+    ws.send(JSON.stringify([UserAction.get, ...await client.query('Select name, plugins, state, serverType, server, id from sub_users WHERE ownerUUID=$1', [uuid]).then((q: any) => q.rows)]))
 
     ws.addEventListener("message", async ({ data }) => {
         const [action, obj]: [number, any] = safeParse(data.toString())
@@ -98,7 +98,7 @@ wss.addListener('connection', async (ws, { headers }) => {
             }
             case UserAction.change: {
                 const { name, loginToken, plugins, state, serverType, server, id } = Object.assign(
-                    await client.query('Select * from sub_users WHERE ownerUUID=$1 AND id=$2', [uuid, obj.id]).then(({ rows }: any) => rows[0]), obj satisfies User) as User
+                    await client.query('Select name, loginToken, plugins, state, serverType, server, id from sub_users WHERE ownerUUID=$1 AND id=$2', [uuid, obj.id]).then(({ rows }: any) => rows[0]), obj satisfies User) as User
 
                 await client.query('UPDATE sub_users SET name=$1, loginToken=$2, plugins=$3, state=$4, serverType=$5, server=$6, ownerUUID WHERE uuid=$7 AND id=$8',
                     [name, loginToken, plugins, state, serverType, server, uuid, id])
