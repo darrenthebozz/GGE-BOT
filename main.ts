@@ -76,7 +76,6 @@ http.createServer({}, app).listen(8080).on('upgrade', (req, socket, head) => wss
 wss.addListener('connection', async (ws, { headers }) => {
     const uuid = headers.cookie?.split('; ').find(e => e.startsWith('uuid='))?.substring(5, Infinity)
 
-
     if (!uuid || !await client.query('Select uuid from users WHERE uuid=$1', [uuid]).then(({ rows }: any) => rows[0]?.uuid))
         return ws.close(4000)
 
@@ -89,21 +88,16 @@ wss.addListener('connection', async (ws, { headers }) => {
         const [action, obj]: [number, any] = safeParse(data.toString())
 
         switch (action) {
-            case UserAction.add: {
-                const { name, loginToken, plugins, serverType, server } = obj satisfies User as User
-
+            case UserAction.add:
                 await client.query('INSERT INTO sub_users(name, loginToken, plugins, serverType, server, ownerUUID) VALUES($1,$2,$3,$4,$5,$6)',
-                    [name, loginToken, plugins, serverType, server, uuid])
+                    Object.values(obj satisfies User))
                 break
-            }
-            case UserAction.change: {
-                const { name, loginToken, plugins, state, serverType, server, id } = Object.assign(
-                    await client.query('Select name, loginToken, plugins, state, serverType, server, id from sub_users WHERE ownerUUID=$1 AND id=$2', [uuid, obj.id]).then(({ rows }: any) => rows[0]), obj satisfies User) as User
-
+            case UserAction.change:
                 await client.query('UPDATE sub_users SET name=$1, loginToken=$2, plugins=$3, state=$4, serverType=$5, server=$6, ownerUUID WHERE uuid=$7 AND id=$8',
-                    [name, loginToken, plugins, state, serverType, server, uuid, id])
+                    Object.values(Object.assign(await client.query(
+                        'Select name, loginToken, plugins, state, serverType, server, id from sub_users WHERE ownerUUID=$1 AND id=$2', 
+                        [uuid, obj.id]).then((r: any) => r.rows[0]), obj satisfies User)))
                 break
-            }
             case UserAction.delete:
                 await client.query('DELETE FROM sub_users WHERE ownerUUID=$1 AND id=$2', [uuid, obj satisfies number])
                 break
