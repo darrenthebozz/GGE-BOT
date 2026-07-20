@@ -64,8 +64,8 @@ subUserEvents.addListener('sub_user_update', payload => {
     activeUsers[newUser.ownerUUID]?.forEach(ws => ws.send([UserAction.change, userChanges]))
 })
 
-client.query('Select * from sub_users').then(({ rows }: any) => rows.forEach((user: User) =>
-    user.state ? new Worker('./ggeBot.ts', { workerData: user.id }) : undefined))
+client.query('Select id, state from sub_users').then(({ rows }: any) => rows.forEach(({ id, state } : { id : number, state : boolean }) =>
+    state ? new Worker('./ggeBot.ts', { workerData: id }) : undefined))
 
 const getSubUser = (uuid: string, id?: number) => id == undefined ?
     client.query('Select * from sub_users WHERE ownerUUID=$1', [uuid]).then(({ rows }) => rows) as Promise<Array<User>> :
@@ -93,19 +93,19 @@ wss.addListener('connection', async (ws, { headers }) => {
             case UserAction.add: {
                 const { name, loginToken, plugins, serverType, server } = obj satisfies User as User
 
-                client.query('INSERT INTO sub_users(name, loginToken, plugins, serverType, server, ownerUUID) VALUES($1,$2,$3,$4,$5,$6)',
+                await client.query('INSERT INTO sub_users(name, loginToken, plugins, serverType, server, ownerUUID) VALUES($1,$2,$3,$4,$5,$6)',
                     [name, loginToken, plugins, serverType, server, uuid])
                 break
             }
             case UserAction.change: {
                 const { name, loginToken, plugins, state, serverType, server } = Object.assign(await getSubUser(uuid, obj.id), obj satisfies User) as User
 
-                client.query('UPDATE sub_users SET name=$1, loginToken=$2, plugins=$3, state=$4, serverType=$5, server=$6, ownerUUID WHERE uuid=$7 AND id=$8',
+                await client.query('UPDATE sub_users SET name=$1, loginToken=$2, plugins=$3, state=$4, serverType=$5, server=$6, ownerUUID WHERE uuid=$7 AND id=$8',
                     [name, loginToken, plugins, state, serverType, server, uuid])
                 break
             }
             case UserAction.delete:
-                client.query('DELETE FROM sub_users WHERE ownerUUID=$1 AND id=$2', [uuid, obj satisfies number])
+                await client.query('DELETE FROM sub_users WHERE ownerUUID=$1 AND id=$2', [uuid, obj satisfies number])
                 break
         }
     })

@@ -54,7 +54,7 @@ CREATE OR REPLACE FUNCTION hash_user_password()
 RETURNS TRIGGER AS $$
 BEGIN
     IF TG_OP = 'INSERT' OR NEW.passwordHash IS DISTINCT FROM OLD.passwordHash THEN
-        NEW.passwordHash := crypt(NEW.passwordHash, gen_salt('bf', 10));
+        NEW.passwordHash := crypt(NEW.passwordHash, gen_salt('bf', 12));
     END IF;
     RETURN NEW;
 END;
