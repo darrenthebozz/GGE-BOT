@@ -6,7 +6,8 @@ import {
     FwbAccordionHeader,
     FwbAccordionPanel,
     FwbToggle,
-    FwbTooltip
+    FwbTooltip,
+    FwbInput
 } from 'flowbite-vue'
 
 enum PluginOptionType {
@@ -26,8 +27,7 @@ class PluginOption {
         this.type = o.type
         this.description = o.description
         this.hideLabel = o.hideLabel
-
-        this.value = ref(o.value)
+        this.value = o.value
     }
 }
 
@@ -35,36 +35,42 @@ class Plugin {
     name: string
     description: string
     options: PluginOption[]
+    state : boolean
     constructor(o: any) {
         this.name = o.name
         this.description = o.description
         this.options = o.options
+        this.state = o.state
     }
 }
 
-const plugins = [new Plugin({
+const plugins = ref([new Plugin({
     name: "Attack Barrons (Empire)",
     description: "blahblahblahblah",
     options: [new PluginOption({
         id: "fuckingOptionIdk",
         type: PluginOptionType.Toggle,
-        description: "Hello world"
-    })]
-})]
+        description: "Hello world",
+    })],
+    state : false
+})])
 
-watch(plugins[0].options[0], option => {
-    console.log(option.value)
+plugins.value.forEach((plugin) =>  {
+    watch(plugin, option => {
+    console.log(plugin)
+    })
 })
+
 </script>
 <template>
     <div
         class="flex flex-col max-h-96 overflow-y-auto scrollbar-color scrollbar-thumb-[#2D2E36] scrollbar-track-[#05040C] scrollbar-thin">
-        <fwb-accordion collapsed flushed v-for="({ name, description, options }) in plugins">
+        <fwb-accordion collapsed flushed v-for="({ name, description, options, state }, index) in plugins">
             <fwb-accordion-panel>
                 <fwb-accordion-header class="p-2">
                     <div class="whitespace-nowrap w-full flex flex-row">
                         <div class="m-auto ml-0">{{ name }}</div>
-                        <div class="m-auto mr-0 pt-2"><fwb-toggle color="green" /></div>
+                        <div class="m-auto mr-0 pt-2"><fwb-toggle v-model="plugins[index].state" color="green" /></div>
                     </div>
                 </fwb-accordion-header>
                 <fwb-accordion-content class="bg-transparent p-0">

@@ -1,4 +1,3 @@
-
 class GAAAreaInfo {
     type: number
     x: number
@@ -63,8 +62,7 @@ export default function login(username: string, password: string, gameServer: st
             }
         }
     })
-    const retry = () =>
-        sendXT("lli", JSON.stringify({
+    const retry = () => sendXT("lli", JSON.stringify({
             CONM: 212,
             RTM: 25,
             ID: 0,
@@ -83,7 +81,6 @@ export default function login(username: string, password: string, gameServer: st
         }))
     xtHandler.addEventListener("vck", retry)
     xtHandler.addEventListener("rlu", () => ws.send('<msg t="sys"><body action="autoJoin" r="-1"></body></msg>'))
-    
     xtHandler.addEventListener("lli", () => {
         const timer = setInterval(() => {
             if(ws.readyState == ws.CLOSED)
@@ -92,22 +89,22 @@ export default function login(username: string, password: string, gameServer: st
             sendXT("pin", "<RoundHouseKick>")
         }, 1000 * 60)
     }, { once: true})
-    
     xtHandler.addEventListener("lli", ({ detail: { obj, r } }: CustomEventInit<any>) => {
-        if (r == 453) {
+        switch(r) {
+            case 453:
             setTimeout(retry, obj.CD * 1000)
             events.dispatchEvent(new CustomEvent("TIMEOUT", { detail: obj.CD }))
-        }
-        else if (r == 27) {
+            break
+            case 27:
             setTimeout(retry, obj.RS * 1000)
             events.dispatchEvent(new CustomEvent("TIMEOUT", { detail: obj.RS }))
-        }
-        else if (r != 0) {
+            break
+            default:
             events.dispatchEvent(new CustomEvent("ERROR", { detail: { obj, r } }))
             ws.close(3000, "An error has occurred")
+            case 0:
         }
     })
-
 
     const allianceInfo = new Promise(resolve => xtHandler.addEventListener("gal", ({ detail: { obj } }: CustomEventInit<any>) => {
         resolve({
@@ -141,11 +138,10 @@ export default function login(username: string, password: string, gameServer: st
             .map((a: any) => Array.from(a.AI).map(e => new CastleAreaInfo(e, a.KID))).flat())
             console.log("resolved castles")
     })) as Promise<Array<CastleAreaInfo>>
+
     xtHandler.addEventListener("slt", ({ detail: { obj } }: CustomEventInit<any>) => {
         ws.close()
-        events.dispatchEvent(new CustomEvent("LOGGEDIN", {
-            detail : obj.LT
-        }))
+        events.dispatchEvent(new CustomEvent("LOGGEDIN", { detail : obj.LT }))
     })
 
     return events

@@ -48,7 +48,7 @@ const validateUser = () => new Promise((resolve, reject) => {
 
     const { zone, server : gameURL } = instances.value.find(({ value }) => server.value == value) ?? {} as { zone : string, server : string }
     if(zone == undefined || gameURL == undefined) return
-
+    return resolve(loginToken = "fake val")
     const loginEvents = login(name.value, password.value, zone, gameURL)
     loginEvents.addEventListener("TIMEOUT", ({ detail: timeout } : any) => {
         log.value = {
