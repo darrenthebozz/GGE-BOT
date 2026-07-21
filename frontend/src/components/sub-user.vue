@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import CastleView from "./castle-view.vue";
-// import player from "../test-data.json";
 const { player } = defineProps(['player'])
 const server = "GB1";
 import { FwbButton } from 'flowbite-vue'
@@ -41,6 +40,6 @@ console.log(player)
                                         </svg></button>
                         </div>
                 </div>
-                <!-- <CastleView :player="player" /> -->
+                <CastleView :player="player" />
         </div>
 </template>

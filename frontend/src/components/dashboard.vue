@@ -58,7 +58,7 @@ ws.addEventListener("close", ({ code }) => {
   <fwb-modal @close="closeModal" v-show="isShowModal" header-class="bg-neutral-primary-soft"
     bodyClass="bg-neutral-primary-soft text-white text-right" size="5xl" wrapper-class="max-w-svw md:m-4 m-0">
     <template #body>
-      <Settings :close="closeModal" />
+      <Settings :closeModal="closeModal" />
     </template>
   </fwb-modal>
 </template>

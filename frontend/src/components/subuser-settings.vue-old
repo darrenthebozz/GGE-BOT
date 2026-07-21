@@ -8,14 +8,14 @@ import {
     FwbAlert
 } from 'flowbite-vue'
 import { computedAsync } from '@vueuse/core'
-import login from '../../src/js/ggebot'
+import login from '../js/ggebot.ts'
 import VueCountdown from '@chenfengyuan/vue-countdown'
-import PluginView from './plugin-view.vue'
-const { closeModal } : { closeModal : Function } = defineProps(['closeModal']) 
+import PluginView from './plugin-view.vue.old/index.js'
 const username = ref('')
 const password = ref('')
 const log = ref()
-const server = ref("1")
+const server = ref(1)
+const evaluatingInstances = shallowRef(false)
 const instances = computedAsync(async () => {
     const lang = await (await fetch("/lang/en")).json()
     const servers = new DOMParser().parseFromString(await (await fetch("/server")).text(), "application/xml")
@@ -33,7 +33,7 @@ const instances = computedAsync(async () => {
             server: nodes.find(({ nodeName }) => nodeName == "server")?.childNodes[0].nodeValue ?? "",
         }
     })
-}, [])
+}, null, evaluatingInstances)
 
 const currentPage = ref(1)
 
@@ -42,7 +42,7 @@ const validateUser = () => new Promise((resolve, reject) => {
     if(instances.value == undefined)
         return
 
-    const { zone, server : gameURL } = instances.value.find(({ value }) => server.value == value) ?? {} as { zone : string, server : string }
+    const { zone, server : gameURL } = instances.value.find(({ value }) => server.value == Number(value)) ?? {} as { zone : string, server : string }
     
     if(zone == undefined || gameURL == undefined)
         return
@@ -75,10 +75,11 @@ const validateUser = () => new Promise((resolve, reject) => {
     loginEvents.addEventListener("LOGGEDIN", ({ detail } : any) => {
         currentUserData.value = detail
         console.log(JSON.stringify(detail))
-        resolve(undefined)
+        resolve()
     })
 })
-const totalPages = 3
+const totalPages = 2
+const activeTab = ref("0")
 </script>
 <template>
     <div class="flex flex-col border-b border-default pb-4 md:pb-5 text-left" v-show="currentPage == 1">
@@ -94,7 +95,7 @@ const totalPages = 3
                 class="bg-neutral-secondary-medium border border-default-medium text-heading text-sm rounded-base focus:ring-brand focus:border-brand block w-full px-3 py-2.5 shadow-xs placeholder:text-body"
                 placeholder="••••••••" required />
         </div>
-        <fwb-select v-model="server" :options="instances" label="Server" class="p-2 pt-0 min-w-fit" placeholder="" required
+        <fwb-select v-if="evaluatingInstances" v-model="server" :options="instances" label="Server" class="p-2 pt-0 min-w-fit" placeholder required
             selectClass="bg-neutral-secondary-medium border border-default-medium text-heading text-sm rounded-base focus:ring-brand focus:border-brand block w-full px-3 py-2.5 shadow-xs placeholder:text-body" />
         <fwb-alert v-if="typeof log === 'string'" type="danger" class="mr-2 ml-2 mt-1">
             {{ log }}
@@ -106,23 +107,22 @@ const totalPages = 3
         </fwb-alert>
     </div>
     <div class="flex flex-col border-b border-default pb-4 md:pb-5 text-left" v-show="currentPage == 2">
-        <!-- <fwb-tabs v-model="activeTab" v-if="currentUserData != undefined" -->
-            <!-- ulClass="flex-nowrap overflow-x-auto max-w-svw whitespace-nowrap scrollbar-color scrollbar-thumb-[#2D2E36] scrollbar-track-[#05040C] scrollbar-thin" -->
-            <!-- buttonClass="p-0 ml-2 mr-2 mb-2 mt-1 border-b-2 rounded-t-base" variant="underline"> -->
-            <!-- <fwb-tab v-for="(castle, index) in currentUserData.castles" :name="String(index)" -->
-                <!-- :title="castle.areaInfo.extraData[7]" class="md:p-3"> -->
-                <!-- <PluginView :castle="castle"/> -->
-            <!-- </fwb-tab> -->
-        <!-- </fwb-tabs> -->
-         <PluginView/>
+        <fwb-tabs v-model="activeTab" v-if="currentUserData != undefined"
+            ulClass="flex-nowrap overflow-x-auto max-w-svw whitespace-nowrap scrollbar-color scrollbar-thumb-[#2D2E36] scrollbar-track-[#05040C] scrollbar-thin"
+            buttonClass="p-0 ml-2 mr-2 mb-2 mt-1 border-b-2 rounded-t-base" variant="underline">
+            <fwb-tab v-for="(castle, index) in currentUserData.castles" :name="String(index)"
+                :title="castle.areaInfo.extraData[7]" class="md:p-3">
+                <PluginView :castle="castle"/>
+            </fwb-tab>
+        </fwb-tabs>
     </div>
     <fwb-pagination v-model="currentPage" :layout="'navigation'" :total-pages="totalPages" large class="mt-4">
         <template #prev-button hidden />
         <template #next-button="{ disabled, increasePage }">
             <button
                 class="disabled:cursor-not-allowed ml-0 m-auto flex h-8 items-center justify-center border border-purple-300 bg-purple-200 px-4 py-4 leading-tight text-gray-500 first:rounded-l-lg last:rounded-r-lg hover:bg-purple-300 hover:text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
-                :disabled="disabled" @click="currentPage == totalPages - 1 ? (currentPage = 1, closeModal()) : validateUser().then(increasePage)">
-                {{ currentPage != totalPages -1 ? "Next" : "Save"}}
+                :disabled="disabled" @click="validateUser().then(increasePage)">
+                {{ currentPage != totalPages ? "Next" : "Save"}}
             </button>
         </template>
     </fwb-pagination>
