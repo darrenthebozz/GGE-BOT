@@ -43,13 +43,15 @@ ws.addEventListener("close", ({ code }) => {
 
 </script>
 <template>
+  <div class="w-full flex flex-row-reverse">
   <fwb-button @click="showModal"
-    class="p-2 md:p-4 text-heading text-sm border border-default rounded-base shadow w-full"><svg
+    class="p-2 md:p-4 text-heading text-sm border border-default rounded-base shadow hover:text-blue-600" color="transparent"><svg
       xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
-      class="size-6 ml-auto hover:text-blue-600">
+      class="size-6">
       <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
     </svg>
   </fwb-button>
+  </div>
   <span v-for="user in users" class="overflow-x-hidden">
     <SubUser :user="user" />
   </span>

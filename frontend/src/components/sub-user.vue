@@ -24,7 +24,7 @@ console.log(player)
                                                 </path>
                                         </svg>
                                 </button>
-                                <fwb-button color="transparent">
+                                <fwb-button class="bg-transparent">
                                         <svg class="w-5 h-5 hover:text-blue-600" aria-hidden="true"
                                                 xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
                                                 <path stroke="currentColor" stroke-linecap="round"

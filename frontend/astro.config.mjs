@@ -17,10 +17,8 @@ export default defineConfig({
   adapter: node({
     mode: 'standalone'
   }),
-  experimental: {
-    cache: {
-      provider: memoryCache()
-    }
+  cache: {
+    provider: memoryCache({ max: 500 }),
   },
   prefetch: true
 })

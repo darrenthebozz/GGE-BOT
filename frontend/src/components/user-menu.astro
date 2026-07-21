@@ -31,22 +31,20 @@
     <div class="p-4 text-heading">
         <ul class="space-y-3" aria-labelledby="mega-menu-dropdown-button">
             <li>
-                <button class="text-right hover:text-fg-brand">Settings</button >
+                <button class="text-right hover:text-fg-brand">Settings</button>
             </li>
             <li>
-                <button id="sign-out" class="text-right hover:text-fg-brand">Sign out</button >
+                <button id="sign-out" class="text-right hover:text-fg-brand"
+                    >Sign out</button
+                >
             </li>
         </ul>
     </div>
 </div>
 <script>
-    import { createAuthClient } from "better-auth/client";
-    
-    const $signOut = document.getElementById(
-        "sign-out",
-    ) as HTMLElement;
-    $signOut.onclick = async function() {
-        await createAuthClient().signOut();
+    const $signOut = document.getElementById("sign-out") as HTMLElement;
+    $signOut.onclick = async function () {
+        document.cookie = `uuid=`;
         window.location.replace("/");
-    }
+    };
 </script>
