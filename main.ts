@@ -76,7 +76,7 @@ wss.addListener('connection', async (ws, { headers }) => {
         switch (action) {
             case UserAction.add:
                 await client.query('INSERT INTO sub_users(name, loginToken, plugins, serverType, server, ownerUUID) VALUES($1,$2,$3,$4,$5,$6)',
-                    Object.values(obj satisfies IUser))
+                    [...Object.values(obj satisfies IUser), uuid])
                 break
             case UserAction.change:
                 await client.query('UPDATE sub_users SET name=$1, loginToken=$2, plugins=$3, state=$4, serverType=$5, server=$6, ownerUUID WHERE uuid=$7 AND id=$8',

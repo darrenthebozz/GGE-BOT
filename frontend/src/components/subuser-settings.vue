@@ -11,8 +11,13 @@ import { computedAsync } from '@vueuse/core'
 import login from '../../src/js/ggebot'
 import VueCountdown from '@chenfengyuan/vue-countdown'
 import PluginView from './plugin-view.vue'
-const { closeModal } : { closeModal : Function } = defineProps(['closeModal']) 
-const username = ref('')
+import ws from '../js/webSocket.ts'
+import UserAction from '../../../modules/EUserAction.ts'
+
+const { closeModal } : { readonly closeModal? : Function } = defineProps(['closeModal']) 
+if(closeModal == undefined) throw new Error("Define close Modal")
+
+const name = ref('')
 const password = ref('')
 const log = ref()
 const server = ref("1")
@@ -34,27 +39,17 @@ const instances = computedAsync(async () => {
         }
     })
 }, [])
-
 const currentPage = ref(1)
-
 const currentUserData = ref()
+let loginToken = ""
 const validateUser = () => new Promise((resolve, reject) => {
     if(instances.value == undefined)
         return
 
     const { zone, server : gameURL } = instances.value.find(({ value }) => server.value == value) ?? {} as { zone : string, server : string }
-    
-    if(zone == undefined || gameURL == undefined)
-        return
+    if(zone == undefined || gameURL == undefined) return
 
-    const userData = {"castles":[{"areaInfo":{"type":4,"x":562,"y":589,"extraData":[3695878,3900163,5,5,5,5,5,"Outpost Xolotl",0,0,-1,6,-1,0,0,[],0],"timeSinceRequest":1781867280554},"id":3695878,"abandonOutpostTime":null,"abandonOutpostTimeCooldown":0,"kingdomID":0},{"areaInfo":{"type":1,"x":641,"y":590,"extraData":[3780245,3900163,4,4,4,4,5,"Change",0,0,-1,-1,-1,0,0,[],0],"timeSinceRequest":1781867280554},"id":3780245,"abandonOutpostTime":-1,"abandonOutpostTimeCooldown":-1,"kingdomID":0},{"areaInfo":{"type":12,"x":582,"y":716,"extraData":[3784579,3900163,3,2,1,1,0,"Castle Xolotl",0,0,-1,-1,-1,1,0,[],0],"timeSinceRequest":1781867280554},"id":3784579,"abandonOutpostTime":-1,"abandonOutpostTimeCooldown":-1,"kingdomID":1},{"areaInfo":{"type":12,"x":662,"y":703,"extraData":[3780406,3900163,3,3,3,1,0,"Castle Xolotl",0,0,-1,-1,-1,2,0,[],0],"timeSinceRequest":1781867280554},"id":3780406,"abandonOutpostTime":-1,"abandonOutpostTimeCooldown":-1,"kingdomID":2},{"areaInfo":{"type":12,"x":664,"y":631,"extraData":[3784887,3900163,3,2,2,1,0,"Castle Xolotl",0,0,-1,-1,-1,3,0,[],0],"timeSinceRequest":1781867280554},"id":3784887,"abandonOutpostTime":-1,"abandonOutpostTimeCooldown":-1,"kingdomID":3},{"areaInfo":{"type":12,"x":704,"y":652,"extraData":[1775,3900163,1,3,3,3,0,"Castle Xolotl",0,0,-1,-1,-1,4,0,[],0],"timeSinceRequest":1781867280554},"id":1775,"abandonOutpostTime":-1,"abandonOutpostTimeCooldown":-1,"kingdomID":4}],"user":{"level":69,"userID":236872,"playerID":3900163,"email":"xolotlGGE@outlook.com","acceptedTOS":1,"verifiedEmail":0,"isCheater":0,"name":"Xolotl","alliance":{"id":57639,"rank":8,"name":"GOLDEN REALM","fame":3836569343,"searchingForPlayers":false}}}
-    return resolve(currentUserData.value = userData)
-    console.log(`username:${username.value}`)
-    console.log(`password:${password.value}`)
-    console.log(`zone:${zone}`)
-    console.log(`gameURL:${gameURL}`)
-
-    const loginEvents = login(username.value, password.value, zone, gameURL)
+    const loginEvents = login(name.value, password.value, zone, gameURL)
     loginEvents.addEventListener("TIMEOUT", ({ detail: timeout } : any) => {
         log.value = {
             type: "TIMEOUT",
@@ -72,19 +67,27 @@ const validateUser = () => new Promise((resolve, reject) => {
         }
         reject()
     })
-    loginEvents.addEventListener("LOGGEDIN", ({ detail } : any) => {
-        currentUserData.value = detail
-        console.log(JSON.stringify(detail))
-        resolve(undefined)
-    })
+    loginEvents.addEventListener("LOGGEDIN", ({ detail } : any) => resolve(loginToken = detail))
 })
+const closePage = () => {
+    currentPage.value = 1
+    closeModal()
+
+    ws.send(JSON.stringify([UserAction.add, {
+        name : name.value,
+        loginToken,
+        plugins: {},
+        serverType: 'default',
+        server : server.value
+    }]))
+}
 const totalPages = 3
 </script>
 <template>
     <div class="flex flex-col border-b border-default pb-4 md:pb-5 text-left" v-show="currentPage == 1">
         <div class="p-2 pt-0">
             <label for="username" class="block mb-2.5 text-sm font-medium text-heading w-fit">Username</label>
-            <input type="text" name="username" v-model="username"
+            <input type="text" name="username" v-model="name"
                 class="bg-neutral-secondary-medium border border-default-medium text-heading text-sm rounded-base focus:ring-brand focus:border-brand block w-full px-3 py-2.5 shadow-xs placeholder:text-body"
                 required />
         </div>
@@ -106,14 +109,6 @@ const totalPages = 3
         </fwb-alert>
     </div>
     <div class="flex flex-col border-b border-default pb-4 md:pb-5 text-left" v-show="currentPage == 2">
-        <!-- <fwb-tabs v-model="activeTab" v-if="currentUserData != undefined" -->
-            <!-- ulClass="flex-nowrap overflow-x-auto max-w-svw whitespace-nowrap scrollbar-color scrollbar-thumb-[#2D2E36] scrollbar-track-[#05040C] scrollbar-thin" -->
-            <!-- buttonClass="p-0 ml-2 mr-2 mb-2 mt-1 border-b-2 rounded-t-base" variant="underline"> -->
-            <!-- <fwb-tab v-for="(castle, index) in currentUserData.castles" :name="String(index)" -->
-                <!-- :title="castle.areaInfo.extraData[7]" class="md:p-3"> -->
-                <!-- <PluginView :castle="castle"/> -->
-            <!-- </fwb-tab> -->
-        <!-- </fwb-tabs> -->
          <PluginView/>
     </div>
     <fwb-pagination v-model="currentPage" :layout="'navigation'" :total-pages="totalPages" large class="mt-4">
@@ -121,7 +116,7 @@ const totalPages = 3
         <template #next-button="{ disabled, increasePage }">
             <button
                 class="disabled:cursor-not-allowed ml-0 m-auto flex h-8 items-center justify-center border border-purple-300 bg-purple-200 px-4 py-4 leading-tight text-gray-500 first:rounded-l-lg last:rounded-r-lg hover:bg-purple-300 hover:text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
-                :disabled="disabled" @click="currentPage == totalPages - 1 ? (currentPage = 1, closeModal()) : validateUser().then(increasePage)">
+                :disabled="disabled" @click="currentPage == totalPages - 1 ? closePage() : validateUser().then(increasePage)">
                 {{ currentPage != totalPages -1 ? "Next" : "Save"}}
             </button>
         </template>

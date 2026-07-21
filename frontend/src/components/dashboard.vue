@@ -8,11 +8,11 @@
 import { onMounted, ref } from 'vue'
 import { initFlowbite } from 'flowbite'
 import { FwbButton, FwbModal } from 'flowbite-vue'
-import ReconnectingWebSocket from "reconnecting-websocket"
 
-import UserAction from '../../../modules/EUserAction.ts'
 import SubUser from "./sub-user.vue"
 import Settings from "./subuser-settings.vue"
+import UserAction from '../../../modules/EUserAction.ts'
+import ws from '../js/webSocket.ts'
 
 onMounted(initFlowbite)
 
@@ -22,14 +22,12 @@ const users = ref([])
 const closeModal = () => isShowModal.value = false
 const showModal = () => isShowModal.value = true
 
-const ws = new ReconnectingWebSocket(`//${window.location.hostname}:${8080 ?? window.location.port}`, [], { WebSocket, minReconnectionDelay: 3000 })
-
 ws.addEventListener("message", ({ data }: any) => {
   const [action, ...obj] = JSON.parse(data.toString())
   switch (action) {
     case UserAction.get:
       console.log(obj)
-      users.value = obj[0]
+      users.value = obj
       break
   }
 })

@@ -141,30 +141,10 @@ export default function login(username: string, password: string, gameServer: st
             .map((a: any) => Array.from(a.AI).map(e => new CastleAreaInfo(e, a.KID))).flat())
             console.log("resolved castles")
     })) as Promise<Array<CastleAreaInfo>>
-
-    Promise.all<any>([castles, userInfo, level, allianceInfo]).then(([castles, userInfo, level, allianceInfo]) => {
+    xtHandler.addEventListener("slt", ({ detail: { obj } }: CustomEventInit<any>) => {
         ws.close()
         events.dispatchEvent(new CustomEvent("LOGGEDIN", {
-            detail: {
-                castles,
-                user: {
-                    level: Number(level),
-                    userID: Number(userInfo.userID),
-                    playerID: Number(userInfo.playerID),
-                    email: String(userInfo.email),
-                    acceptedTOS: Number(userInfo.acceptedTOS),
-                    verifiedEmail: Number(userInfo.verifiedEmail),
-                    isCheater: Number(userInfo.isCheater),
-                    name: String(userInfo.name),
-                    alliance: {
-                        id: Number(allianceInfo.id),
-                        rank: Number(allianceInfo.rank),
-                        name: String(allianceInfo.name),
-                        fame: Number(allianceInfo.fame),
-                        searchingForPlayers: Boolean(allianceInfo.searchingForPlayers)
-                    }
-                }
-            }
+            detail : obj.LT
         }))
     })
 

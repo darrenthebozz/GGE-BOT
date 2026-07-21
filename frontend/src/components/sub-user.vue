@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import CastleView from "./castle-view.vue";
-const { player } = defineProps(['player'])
+const { user } = defineProps(['user'])
 const server = "GB1";
 import { FwbButton } from 'flowbite-vue'
-console.log(player)
+console.log(user)
 </script>
 <template>
         <div class="p-2 md:p-4 text-heading text-sm border border-default rounded-base shadow">
                 <div class="flex flex-row">
                         <div class="p-2 grid grid-flow-col grid-rows-2 text-left">
                                 <dt class="mr-2 text-body">Name</dt>
-                                <dd class="mr-2 text-lg font-medium">{{ player.name }}</dd>
+                                <dd class="mr-2 text-lg font-medium">{{ user.name }}</dd>
                                 <dt class="mr-2 text-body">Server</dt>
                                 <dd class="mr-2 text-lg font-medium">{{ server }}</dd>
                         </div>
@@ -40,6 +40,6 @@ console.log(player)
                                         </svg></button>
                         </div>
                 </div>
-                <CastleView :player="player" />
+                <CastleView :player="user" />
         </div>
 </template>
