@@ -27,7 +27,6 @@ END $$ LANGUAGE PLPGSQL;
 CREATE TRIGGER sub_user_update
 AFTER UPDATE ON sub_users
 FOR EACH ROW
-WHEN (OLD.* IS DISTINCT FROM NEW.*)
 EXECUTE FUNCTION on_sub_user_update();
 
 CREATE TRIGGER sub_user_update2

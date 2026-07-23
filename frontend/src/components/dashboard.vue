@@ -5,29 +5,37 @@
 @source "../../node_modules/flowbite-vue";
 </style>
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, shallowRef, triggerRef } from 'vue'
+import type { Ref } from 'vue'
 import { initFlowbite } from 'flowbite'
 import { FwbButton, FwbModal } from 'flowbite-vue'
 
 import SubUser from "./sub-user.vue"
 import Settings from "./subuser-settings.vue"
-import UserAction from '../../../modules/EUserAction.ts'
+import UserAction from '../../../modules/CUserAction.ts'
+import User from '../../../modules/IUser.ts'
 import ws from '../js/webSocket.ts'
 
 onMounted(initFlowbite)
 
 const isShowModal = ref(false)
-const users = ref([])
+const users = shallowRef<Array<Ref<User>>>([])
 
 const closeModal = () => isShowModal.value = false
 const showModal = () => isShowModal.value = true
 
 ws.addEventListener("message", ({ data }: any) => {
-  const [action, ...obj] = JSON.parse(data.toString())
+  const [action, ...obj] : [Number, any] = JSON.parse(data.toString())
   switch (action) {
     case UserAction.get:
-      console.log(obj)
-      users.value = obj
+      users.value = obj.map((user) => ref<User>(user))
+      break
+    case UserAction.change:
+      const user = users.value.find(user => user.value.id == obj[0].id)
+      if(user == undefined) {
+        return (users.value.push(obj[0]), triggerRef(users))
+      }
+      Object.assign(user.value, obj[0])
       break
   }
 })

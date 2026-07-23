@@ -1,9 +1,23 @@
-<script setup lang="ts">
-import CastleView from "./castle-view.vue";
-const { user } = defineProps(['user'])
-const server = "GB1";
-import { FwbButton } from 'flowbite-vue'
-console.log(user)
+<script setup lang='ts'>
+import { watch, reactive } from 'vue'
+import CastleView from './castle-view.vue'
+import type User from '../../../modules/IUser.ts'
+import UserActions from '../../../modules/CUserAction.ts'
+import webSocket from '../js/webSocket.ts'
+const props = defineProps(['user'])
+const user = reactive<User>(props.user)
+const server = "GB1"
+
+const log = () => {
+        alert("test")
+}
+const settings = () => {
+
+}
+
+const changeUserState = () => 
+        webSocket.send(JSON.stringify([UserActions.change, { id: user.id, state: user.state }]))
+
 </script>
 <template>
         <div class="p-2 md:p-4 text-heading text-sm border border-default rounded-base shadow">
@@ -14,30 +28,54 @@ console.log(user)
                                 <dt class="mr-2 text-body">Server</dt>
                                 <dd class="mr-2 text-lg font-medium">{{ server }}</dd>
                         </div>
-                        <div class="ml-auto mb-auto mt-auto mr-1 whitespace-nowrap">
-                                <button><svg class="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
+                        <div class="ml-auto mb-auto mt-auto mr-1 whitespace-nowrap flex flex-row gap-2">
+                                        <svg 
+                                                v-on:click="log"
+                                                class="w-5 h-5 hover:text-blue-600" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
                                                 fill="none" viewBox="0 0 16 20">
                                                 <path stroke="currentColor" stroke-linecap="round"
-                                                        stroke-linejoin="round" stroke-width="2"
+                                                        stroke-linejoin="round" stroke-width="1"
                                                         d="M1 17V2a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H3a2 2 0 0 0-2 2Zm0 0a2 2 0 0 0 2 2h12M5 15V1m8 18v-4">
                                                 </path>
                                         </svg>
-                                </button>
-                                <fwb-button class="bg-transparent">
-                                        <svg class="w-5 h-5 hover:text-blue-600" aria-hidden="true"
+                                        <svg 
+                                                v-on:click="settings"
+                                                class="w-5 h-5 hover:text-blue-600" aria-hidden="true"
                                                 xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
                                                 <path stroke="currentColor" stroke-linecap="round"
-                                                        stroke-linejoin="round" stroke-width="2"
-                                                        d="M4 12.25V1m0 11.25a2.25 2.25 0 0 0 0 4.5m0-4.5a2.25 2.25 0 0 1 0 4.5M4 19v-2.25m6-13.5V1m0 2.25a2.25 2.25 0 0 0 0 4.5m0-4.5a2.25 2.25 0 0 1 0 4.5M10 19V7.75m6 4.5V1m0 11.25a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5ZM16 19v-2">
-                                                </path>
-                                        </svg></fwb-button>
-                                <button><svg class="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                                fill="none" viewBox="0 0 10 16">
-                                                <path stroke="currentColor" stroke-linecap="round"
-                                                        stroke-linejoin="round" stroke-width="2"
-                                                        d="m2.707 14.293 5.586-5.586a1 1 0 0 0 0-1.414L2.707 1.707A1 1 0 0 0 1 2.414v11.172a1 1 0 0 0 1.707.707Z">
-                                                </path>
-                                        </svg></button>
+                                                        stroke-linejoin="round" stroke-width="1"
+                                                        d="M4 12.25V1m0 11.25a2.25 2.25 0 0 0 0 4.5m0-4.5a2.25 2.25 0 0 1 0 4.5M4 19v-2.25m6-13.5V1m0 2.25a2.25 2.25 0 0 0 0 4.5m0-4.5a2.25 2.25 0 0 1 0 4.5M10 19V7.75m6 4.5V1m0 11.25a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5ZM16 19v-2"/>
+                                        </svg>
+                                        <svg 
+                                                v-show="!user.state"
+                                                v-on:click="changeUserState(user.state = true)"
+                                                class="w-5 h-5 hover:text-blue-600"
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                fill="none"
+                                                viewBox="3 0 10 16">
+                                                <path 
+                                                        stroke="currentColor"
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                        stroke-width="1"
+                                                        d="m2.707 14.293 5.586-5.586a1 1 0 0 0 0-1.414L2.707 1.707A1 1 0 0 0 1 2.414v11.172a1 1 0 0 0 1.707.707Z"/>
+                                        </svg>
+                                        <svg
+                                                v-show="user.state"
+                                                v-on:click="changeUserState(user.state = false)"
+                                                class="w-5 h-5 hover:text-blue-600"
+                                                xmlns="http://www.w3.org/2000/svg" 
+                                                fill="none" 
+                                                viewBox="0 0 25 22"
+                                                >
+                                                <path 
+                                                        stroke="currentColor"
+                                                        stroke-linecap="round" 
+                                                        stroke-linejoin="round"
+                                                        stroke-width="1"
+                                                d="M12 0v22m-10 -22v22" />
+                                        </svg>
+
                         </div>
                 </div>
                 <CastleView :player="user" />

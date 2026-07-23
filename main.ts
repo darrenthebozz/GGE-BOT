@@ -11,9 +11,9 @@ import { safeParse } from 'secure-json-parse'
 import { handler as ssrHandler } from './frontend/dist/server/entry.mjs'
 import IterableWeakMap from './modules/IterableWeakMap.ts'
 import type IUser from './modules/IUser.ts'
-import UserAction from './modules/EUserAction.ts'
+import UserAction from './modules/CUserAction.ts'
 
-console.debug = 1 ? console.debug : () => { }
+console.debug = 0 ? console.debug : () => { }
 const workingPath = join(tmpdir(), 'ggeBot')
 try { await mkdir(workingPath) } catch (e) { console.debug(e) }
 const databaseDir = join(workingPath, './db')
@@ -47,7 +47,9 @@ subUserEvents.addListener('sub_user_update', payload => {
     if (userChanges.state == true)
         new Worker('./ggeBot.ts', { workerData: newUser.id })
 
-    activeUsers[newUser.ownerUUID]?.forEach(ws => ws.send([UserAction.change, userChanges]))
+    activeUsers[newUser.owneruuid]?.forEach(ws => {
+        ws.send(JSON.stringify([UserAction.change, userChanges]))
+    })
 })
 
 await client.query('Select id, state from sub_users').then((r : any) => r.rows.forEach(({ id, state }: { id: number, state: boolean }) =>
@@ -74,17 +76,24 @@ wss.addListener('connection', async (ws, { headers }) => {
 
         switch (action) {
             case UserAction.add:
-                await client.query('INSERT INTO sub_users(name, loginToken, plugins, serverType, server, ownerUUID) VALUES($1,$2,$3,$4,$5,$6)',
-                    [...Object.values(obj satisfies IUser), uuid])
+                await client.query('INSERT INTO sub_users(name, loginToken, plugins, serverType, server, ownerUUID) VALUES($2,$3,$4,$5,$6,$1)',
+                    [uuid, ...Object.values(obj)])
                 break
-            case UserAction.change:
-                await client.query('UPDATE sub_users SET name=$1, loginToken=$2, plugins=$3, state=$4, serverType=$5, server=$6, ownerUUID WHERE uuid=$7 AND id=$8',
-                    Object.values(Object.assign(await client.query(
-                        'Select name, loginToken, plugins, state, serverType, server from sub_users WHERE ownerUUID=$1 AND id=$2', 
-                        [uuid, obj.id]).then((r: any) => r.rows[0]), obj satisfies IUser)))
+            case UserAction.change: {
+                let i = 3
+                await client.query("UPDATE sub_users SET " + (
+                        (obj.name       ? `name=$${i++},` : '') +
+                        (obj.loginToken ? `loginToken=$${i++},` : '') + 
+                        (obj.plugins    ? `plugins=$${i++},` : '') + 
+                        (obj.state      ? `state=$${i++},` : '') +
+                        (obj.serverType ? `serverType=$${i++},` : '') +
+                        (obj.server     ? `server=$${i++}` : '')
+                ).replace(/\,$/, '') + " WHERE ownerUUID=$1 AND id=$2",
+                    [uuid, ...Object.values(obj)])
+                }
                 break
             case UserAction.delete:
-                await client.query('DELETE FROM sub_users WHERE ownerUUID=$1 AND id=$2', [uuid, obj satisfies number])
+                await client.query('DELETE FROM sub_users WHERE ownerUUID=$1 AND id=$2', [uuid, obj])
                 break
         }
     })

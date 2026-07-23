@@ -3,6 +3,7 @@ export default class IterableWeakMap<T extends WeakKey> {
   #refSet = new Set()
   #registry = new FinalizationRegistry(this.#cleanup.bind(this))
   #cleanup(value : any) { this.#refSet.delete(value) }
+  #size = 0
 
   constructor(iterable? : any) {
     if(iterable)
@@ -21,6 +22,8 @@ export default class IterableWeakMap<T extends WeakKey> {
       this.#weakMap.set(key, entry)
       this.#refSet.add(ref)
     }
+    
+    this.#size++
 
     entry.value = value
     return this
@@ -33,6 +36,7 @@ export default class IterableWeakMap<T extends WeakKey> {
     this.#weakMap.delete(key)
     this.#refSet.delete(entry.ref)
     this.#registry.unregister(key)
+    this.#size--
 
     return true
   }
@@ -45,6 +49,7 @@ export default class IterableWeakMap<T extends WeakKey> {
 
     this.#weakMap = new WeakMap()
     this.#refSet.clear()
+    this.#size = 0
   }
   *entries() {
     for(const ref of this.#refSet as Set<WeakRef<T>>) {
@@ -73,7 +78,7 @@ export default class IterableWeakMap<T extends WeakKey> {
   }
 
   [Symbol.iterator]() { return this.entries() }
-  get size() { return this.keys().reduce(i => i++, 0) }
+  get size() { return this.#size }
 
   static get [Symbol.species]() { return IterableWeakMap }
 }

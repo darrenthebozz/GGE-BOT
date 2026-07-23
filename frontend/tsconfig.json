@@ -8,5 +8,6 @@
     "noEmit": true,
     "allowImportingTsExtensions": true,
     "noImplicitAny": false,
+    "module": "preserve"
   }
 }

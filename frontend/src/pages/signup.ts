@@ -1,9 +1,9 @@
 import type { APIRoute } from 'astro'
-import client from '../js/database'
+import client from '../js/database.js'
 
 export const prerender = false
 export const POST: APIRoute = async ({ clientAddress, request }) => {
-  const { name, password } = await request.json();
+  const { name, password } = await request.json()
   if (name == undefined || password == undefined) {
     console.warn(new Error(`[${clientAddress}] Undefined field/s`))
     return new Response(null, { status: 400 })

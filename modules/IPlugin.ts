@@ -1,17 +1,16 @@
-enum PluginOptionType {
+export enum PluginOptionType {
     Toggle,
     Number
 }
-
-interface PluginOption {
+export interface PluginOption {
     id: string
     type: PluginOptionType
     description?: string
     value?: any
     hideLabel?: boolean
+    [key: string]: any
 }
-
-interface Plugin {
+export interface Plugin {
     name: string
     description: string
     options: PluginOption[]

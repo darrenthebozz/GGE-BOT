@@ -18,7 +18,7 @@ export default defineConfig({
     mode: 'standalone'
   }),
   cache: {
-    provider: memoryCache({ max: 500 }),
+    provider: memoryCache(),
   },
   prefetch: true
 })

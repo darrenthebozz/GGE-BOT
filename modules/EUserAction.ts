@@ -1,1 +1,0 @@
-export default { add: 0, change: 1, delete: 2, get: 3 }

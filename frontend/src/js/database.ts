@@ -1,2 +1,1 @@
-import { Client } from 'pg'
-export default await new Client({ port: 5436, password : "password", user: "postgres" }).connect() 
+export default await new (await import('pg')).Client({ port: 5436, password : "password", user: "postgres" }).connect() 

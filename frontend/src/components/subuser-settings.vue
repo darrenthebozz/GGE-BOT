@@ -12,7 +12,7 @@ import login from '../../src/js/ggebot'
 import VueCountdown from '@chenfengyuan/vue-countdown'
 import PluginView from './plugin-view.vue'
 import ws from '../js/webSocket.ts'
-import UserAction from '../../../modules/EUserAction.ts'
+import UserAction from '../../../modules/CUserAction.ts'
 
 const { closeModal } : { readonly closeModal? : Function } = defineProps(['closeModal']) 
 if(closeModal == undefined) throw new Error("Define close Modal")
