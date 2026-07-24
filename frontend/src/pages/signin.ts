@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro'
-import client from '../js/database.js'
+import client from '../../../modules/database.js'
 
 export const prerender = false
 export const POST: APIRoute = async ({ clientAddress, request }) => {
