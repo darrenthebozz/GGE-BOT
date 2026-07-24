@@ -8,6 +8,7 @@
     "noEmit": true,
     "allowImportingTsExtensions": true,
     "noImplicitAny": false,
-    "module": "preserve"
+    "module": "preserve",
+    "target": "es2024"
   }
 }

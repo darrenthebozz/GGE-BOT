@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, shallowRef } from 'vue'
+import { ref } from 'vue'
 import {
     FwbTab,
     FwbTabs,
@@ -13,34 +13,17 @@ import VueCountdown from '@chenfengyuan/vue-countdown'
 import PluginView from './plugin-view.vue'
 import ws from '../js/webSocket.ts'
 import UserAction from '../../../modules/CUserAction.ts'
-
-const { closeModal } : { readonly closeModal? : Function } = defineProps(['closeModal']) 
+const { closeModal, lang } : 
+    { readonly closeModal? : Function, readonly lang? : { [key : string] : string } } = defineProps(['closeModal', 'lang']) 
 if(closeModal == undefined) throw new Error("Define close Modal")
 
 const name = ref('')
 const password = ref('')
 const log = ref()
 const server = ref("1")
-const instances = computedAsync(async () => {
-    const lang = await (await fetch("/lang/en")).json()
-    const servers = new DOMParser().parseFromString(await (await fetch("/server")).text(), "application/xml")
+const instances = computedAsync(() => import('../js/serverInstances.ts').then(i => i.default), [])
 
-    return Array.from(servers.getElementsByTagName("instance") ?? []).map(obj => {
-        const nodes = Array.from(obj.childNodes)
-
-        const instanceLocaId = nodes.find(({ nodeName }) => nodeName == "instanceLocaId")?.childNodes[0].nodeValue ?? ""
-        const instanceName = nodes.find(({ nodeName }) => nodeName == "instanceName")?.childNodes[0].nodeValue ?? ""
-
-        return {
-            value: obj.getAttribute("value") ?? "",
-            name: lang[instanceLocaId] + ' ' + instanceName,
-            zone: nodes.find(({ nodeName }) => nodeName == "zone")?.childNodes[0].nodeValue ?? "",
-            server: nodes.find(({ nodeName }) => nodeName == "server")?.childNodes[0].nodeValue ?? "",
-        }
-    })
-}, [])
 const currentPage = ref(1)
-const currentUserData = ref()
 let loginToken = ""
 const validateUser = () => new Promise((resolve, reject) => {
     if(instances.value == undefined)

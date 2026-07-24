@@ -63,3 +63,14 @@ CREATE TRIGGER hash_password
 BEFORE INSERT OR UPDATE ON users
 FOR EACH ROW
 EXECUTE FUNCTION hash_user_password();
+
+CREATE SEQUENCE IF NOT EXISTS history_sequence MINVALUE 1 MAXVALUE 100 CYCLE;
+
+CREATE TABLE IF NOT EXISTS log_history_$1 (
+  sequence          INTEGER PRIMARY key,
+  timestamp         TIMESTAMP NOT NULL DEFAULT now(),
+  data              TEXT
+);
+
+---INSERT INTO history (sequence, timestamp, data) VALUES (nextval("history_sequence"), default, $1) ON CONFLICT (sequence) DO UPDATE SET timestamp = now(), data = left($1, 256);
+--delete table when done

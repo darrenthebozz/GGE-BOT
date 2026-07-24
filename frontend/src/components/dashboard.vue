@@ -16,6 +16,8 @@ import UserAction from '../../../modules/CUserAction.ts'
 import User from '../../../modules/IUser.ts'
 import ws from '../js/webSocket.ts'
 
+const lang = await(await fetch("/lang/en")).json() as { [key: string] : string }
+
 onMounted(initFlowbite)
 
 const isShowModal = ref(false)
@@ -64,7 +66,7 @@ ws.addEventListener("close", ({ code }) => {
   <fwb-modal @close="closeModal" v-show="isShowModal" header-class="bg-neutral-primary-soft"
     bodyClass="bg-neutral-primary-soft text-white text-right" size="5xl" wrapper-class="max-w-svw md:m-4 m-0">
     <template #body>
-      <Settings :closeModal="closeModal" />
+      <Settings :closeModal="closeModal" :lang="lang" />
     </template>
   </fwb-modal>
 </template>

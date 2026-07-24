@@ -1,22 +1,19 @@
 <script setup lang='ts'>
-import { watch, reactive } from 'vue'
+import { reactive } from 'vue'
 import CastleView from './castle-view.vue'
 import type User from '../../../modules/IUser.ts'
 import UserActions from '../../../modules/CUserAction.ts'
 import webSocket from '../js/webSocket.ts'
-const props = defineProps(['user'])
-const user = reactive<User>(props.user)
-const server = "GB1"
 
-const log = () => {
-        alert("test")
-}
-const settings = () => {
-
-}
-
+const props = defineProps(['user']) as { user : User }
+const user = reactive(props.user)
+const server = props.user.server
+const log = () => alert("test")
+const settings = () => {}
 const changeUserState = () => 
         webSocket.send(JSON.stringify([UserActions.change, { id: user.id, state: user.state }]))
+const deleteUser = () => 
+        webSocket.send(JSON.stringify([UserActions.delete, user.id]))
 
 </script>
 <template>
@@ -48,7 +45,7 @@ const changeUserState = () =>
                                         </svg>
                                         <svg 
                                                 v-show="!user.state"
-                                                v-on:click="changeUserState(user.state = true)"
+                                                v-on:click="user.state = true, changeUserState()"
                                                 class="w-5 h-5 hover:text-blue-600"
                                                 xmlns="http://www.w3.org/2000/svg"
                                                 fill="none"
@@ -62,7 +59,7 @@ const changeUserState = () =>
                                         </svg>
                                         <svg
                                                 v-show="user.state"
-                                                v-on:click="changeUserState(user.state = false)"
+                                                v-on:click="user.state = false, changeUserState()"
                                                 class="w-5 h-5 hover:text-blue-600"
                                                 xmlns="http://www.w3.org/2000/svg" 
                                                 fill="none" 
