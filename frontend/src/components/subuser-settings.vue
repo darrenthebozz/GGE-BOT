@@ -21,7 +21,7 @@ const name = ref('')
 const password = ref('')
 const log = ref()
 const server = ref("1")
-const instances = computedAsync(() => import('../js/serverInstances.ts').then(i => i.default), [])
+const instances = computedAsync(() => import('../../../modules/serverInstances.ts').then(i => i.default), [])
 
 const currentPage = ref(1)
 let loginToken = ""

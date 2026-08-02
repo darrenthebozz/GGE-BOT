@@ -21,7 +21,7 @@ CREATE FUNCTION on_sub_user_delete()
 RETURNS TRIGGER AS $$
 BEGIN
    PERFORM pg_notify('sub_user_delete', OLD.id::TEXT);
-   DROP TABLE IF EXISTS 'log_history_' || OLD.id::TEXT
+   EXECUTE 'DROP TABLE IF EXISTS ' || quote_ident('log_history_' || OLD.id::text);
    RETURN NEW;
 END $$ LANGUAGE PLPGSQL;
 

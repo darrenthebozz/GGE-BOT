@@ -2,7 +2,7 @@
 import { reactive } from 'vue'
 import CastleView from './castle-view.vue'
 import type User from '../../../modules/IUser.ts'
-import UserActions from '../../../modules/CUserAction.ts'
+import UserAction from '../../../modules/CUserAction.ts'
 import webSocket from '../js/webSocket.ts'
 
 const props = defineProps(['user']) as { user : User }
@@ -11,9 +11,9 @@ const server = props.user.server
 const log = () => alert("test")
 const settings = () => {}
 const changeUserState = () => 
-        webSocket.send(JSON.stringify([UserActions.change, { id: user.id, state: user.state }]))
+        webSocket.send(JSON.stringify([UserAction.change, { id: user.id, state: user.state }]))
 const deleteUser = () => 
-        webSocket.send(JSON.stringify([UserActions.delete, user.id]))
+        webSocket.send(JSON.stringify([UserAction.delete, user.id]))
 
 </script>
 <template>

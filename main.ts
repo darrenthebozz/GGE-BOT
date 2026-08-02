@@ -13,15 +13,21 @@ import IterableWeakMap from './modules/IterableWeakMap.ts'
 import type IUser from './modules/IUser.ts'
 import UserAction from './modules/CUserAction.ts'
 
-console.debug = 0 ? console.debug : () => { }
+export const address = new URL("ws://127.0.0.1:8080")
+
+const debug = 1
+const debugPostgres = 0
 const workingPath = join(tmpdir(), 'ggeBot')
+
+console.debug = debug ? console.debug : () => { }
+
 try { await mkdir(workingPath) } catch (e) { console.debug(e) }
 const databaseDir = join(workingPath, './db')
 const pg = new EmbeddedPostgres({
     databaseDir,
     port: 5436,
     persistent: true,
-    onLog: console.debug
+    onLog: debugPostgres ? console.debug : () => {}
 })
 let databaseInitialised = false
 
@@ -29,50 +35,51 @@ console.log(workingPath)
 try { await pg.initialise(); databaseInitialised = true } catch (e) { console.debug(e) }
 await pg.start()
 
-const client = await pg.getPgClient().connect()
+export const client = await pg.getPgClient().connect()
 const subUserEvents = new EventEmitter()
-const activeUsers: { [key: string]: IterableWeakMap<WebSocket> | undefined } = {}
+const activeUsers: { [key: string]: IterableWeakMap<WebSocket, { log : number }> | undefined } = {}
 
 if (databaseInitialised)
     await client.query(await readFile('./init.sql').then(o => o.toString()))
-await client.query(`LISTEN sub_user_update`)
+await client.query(`LISTEN sub_user_update; LISTEN history_update`)
 client.addListener('notification', ({ channel, payload }: any) => subUserEvents.emit(channel, payload))
 
-const startBot = async (id : number) => {
+const startBot = async (id : number, ownerUUID : string) => {
     try {
         await client.query(`
         CREATE SEQUENCE IF NOT EXISTS history_sequence MINVALUE 1 MAXVALUE 128 CYCLE;
         
-        CREATE TABLE IF NOT EXISTS log_history_$1 (
+        CREATE TABLE IF NOT EXISTS history_${id} (
         sequence  INTEGER PRIMARY key,
         timestamp TIMESTAMP NOT NULL DEFAULT now(),
         data      TEXT[] NOT NULL,
-        logLevel  VerbosityLevel NOT NULL
+        logLevel  VerbosityLevel NOT NULL,
         owneruuid TEXT NOT NULL);
-        
-        CREATE FUNCTION on_history_update_$1()
+        CREATE FUNCTION on_history_update_${id}()
         RETURNS TRIGGER AS $$
         BEGIN
-        PERFORM pg_notify('history_update', array_to_json(ARRAY[$1,NEW.*])::TEXT);
+        PERFORM pg_notify('history_update', '[' || '${id},' || row_to_json(NEW.*)::TEXT || ']');
         RETURN NEW;
         END $$ LANGUAGE PLPGSQL;
-
-        CREATE TRIGGER history_$1
-        AFTER INSERT OR UPDATE ON log_history_$1
+        CREATE TRIGGER history_${id}
+        AFTER INSERT OR UPDATE ON history_${id}
         FOR EACH ROW
-        EXECUTE FUNCTION on_history_update_$1();
-        LISTEN `, [String(id)])
+        EXECUTE FUNCTION on_history_update_${id}();`)
     } catch (e) { console.debug(e) }
+    new Worker('./bot.ts', { workerData: {id, ownerUUID} })
 }
 subUserEvents.addListener('history_update', payload => {
     const [id, log] = JSON.parse(payload) as [string, { sequence? : number, timestamp : number, data : string[], owneruuid : string, logLevel : string, id? : number }]
     const activeUser = activeUsers[log.owneruuid]
+    if(!activeUser)
+        return
+
     delete log.sequence
     delete log.owneruuid
 
     log.id = Number(id)
-
-    activeUser?.forEach(ws => 
+    
+    Array.from(activeUser?.keys()).forEach(ws => 
         ws.send(JSON.stringify([UserAction.log, log])))
 })
 subUserEvents.addListener('sub_user_update', payload => {
@@ -83,19 +90,24 @@ subUserEvents.addListener('sub_user_update', payload => {
     userChanges.id = newUser.id
 
     if (userChanges.state == true)
-        new Worker('./bot.ts', { workerData: newUser.id })
+        startBot(newUser.id, newUser.owneruuid)
 
-    activeUsers[newUser.owneruuid]?.forEach(ws => 
+    const activeUser = activeUsers[newUser.ownerUUID]
+
+    if(!activeUser)
+        return
+
+    Array.from(activeUser.keys()).forEach(ws => 
         ws.send(JSON.stringify([UserAction.change, userChanges])))
 })
 
-await client.query('Select id, state from sub_users').then((r: any) => r.rows.forEach(({ id, state }: { id: number, state: boolean }) =>
-    state ? new Worker('./bot.ts', { workerData: id }) : undefined))
+await client.query('Select id, state, owneruuid from sub_users').then((r: any) => r.rows.forEach(({ id, state, owneruuid }: { id: number, state: boolean, owneruuid : string }) =>
+    state ? startBot(id, owneruuid) : undefined))
 
-const wss = new WebSocketServer({ noServer: true })
+export const wss = new WebSocketServer({ noServer: true })
 const app = express().use('/', express.static('frontend/dist/client/')).use(ssrHandler)
 
-http.createServer({}, app).listen(8080).on('upgrade', (req, socket, head) => wss.handleUpgrade(req, socket, head, socket =>
+http.createServer({}, app).listen(address.port).on('upgrade', (req, socket, head) => wss.handleUpgrade(req, socket, head, socket =>
     wss.emit('connection', socket, req)))
 
 wss.addListener('connection', async (ws, { headers }) => {
@@ -105,7 +117,7 @@ wss.addListener('connection', async (ws, { headers }) => {
         return ws.close(4000)
 
     activeUsers[uuid] ??= new IterableWeakMap()
-    activeUsers[uuid].set(ws, ws)
+    activeUsers[uuid].set(ws, {})
 
     ws.send(JSON.stringify([UserAction.get, ...await client.query('Select name, plugins, state, serverType, server, id from sub_users WHERE ownerUUID=$1', [uuid]).then((q: any) => q.rows)]))
     ws.addEventListener("message", async ({ data }) => {
@@ -130,6 +142,10 @@ wss.addListener('connection', async (ws, { headers }) => {
             }
             case UserAction.delete:
                 await client.query('DELETE FROM sub_users WHERE ownerUUID=$1 AND id=$2', [uuid, obj])
+                break
+            case UserAction.log: //FIXME: HOLY SHIT YOU ARE DUMB
+                await client.query(`DELETE FROM history_${Number(obj)} WHERE ownerUUID=$1`, [uuid])
+                activeUsers[uuid]?.get(ws)
                 break
         }
     })

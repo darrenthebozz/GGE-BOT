@@ -7,6 +7,9 @@ import vue from '@astrojs/vue'
 
 // https://astro.build/config
 export default defineConfig({
+  security : {
+    checkOrigin : false
+  },
   output: 'server',
   vite: {
     plugins: [
@@ -20,5 +23,5 @@ export default defineConfig({
   cache: {
     provider: memoryCache(),
   },
-  prefetch: true
+  prefetch: true,
 })

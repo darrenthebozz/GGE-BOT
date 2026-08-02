@@ -1,5 +1,5 @@
-export default class IterableWeakMap<T extends WeakKey> {
-  #weakMap = new WeakMap()
+export default class IterableWeakMap<T extends WeakKey, J extends WeakKey> {
+  #weakMap = new WeakMap<T, {ref : WeakRef<T>, value : J | null}>()
   #refSet = new Set()
   #registry = new FinalizationRegistry(this.#cleanup.bind(this))
   #cleanup(value : any) { this.#refSet.delete(value) }
@@ -11,9 +11,9 @@ export default class IterableWeakMap<T extends WeakKey> {
         this.set(key, value)
   }
 
-  get(key : any) { return this.#weakMap.get(key)?.value }
-  has(key : any) { return this.#weakMap.has(key) }
-  set(key : any, value : T) {
+  get(key : T) { return this.#weakMap.get(key)?.value }
+  has(key : T) { return this.#weakMap.has(key) }
+  set(key : T, value : J) {
     let entry = this.#weakMap.get(key)
     if(!entry) {
       const ref = new WeakRef(key)
@@ -28,7 +28,7 @@ export default class IterableWeakMap<T extends WeakKey> {
     entry.value = value
     return this
   }
-  delete(key : any) {
+  delete(key : T) {
     const entry = this.#weakMap.get(key)
     if(!entry)
       return false
@@ -41,7 +41,7 @@ export default class IterableWeakMap<T extends WeakKey> {
     return true
   }
   clear() {
-    for(const ref of this.#refSet as Set<WeakRef<T>>) {
+    for(const ref of this.#refSet as Set<WeakRef<J>>) {
       const el = ref.deref()
       if(el !== undefined)
         this.#registry.unregister(el)
@@ -52,7 +52,7 @@ export default class IterableWeakMap<T extends WeakKey> {
     this.#size = 0
   }
   *entries() {
-    for(const ref of this.#refSet as Set<WeakRef<T>>) {
+    for(const ref of this.#refSet as Set<WeakRef<J>>) {
       const el = ref.deref()
       if(el !== undefined)
         yield [el, this.#weakMap.get(el).value]
@@ -66,13 +66,13 @@ export default class IterableWeakMap<T extends WeakKey> {
     }
   }
   *values() {
-    for(const ref of this.#refSet as Set<WeakRef<T>>) {
+    for(const ref of this.#refSet as Set<WeakRef<J>>) {
       const el = ref.deref()
       if(el !== undefined)
         yield this.#weakMap.get(el).value
     }
   }
-  forEach(callbackFn : (value : T, key? : any, thisType? : any) => void, thisArg? : any) {
+  forEach(callbackFn : (value : J, key? : T, thisType? : any) => void, thisArg? : any) {
     for(const [key, value] of this.entries())
       callbackFn.call(thisArg, value, key, this)
   }
