@@ -1,6 +1,6 @@
-export default class IterableWeakMap<T extends WeakKey, J extends WeakKey> {
-  #weakMap = new WeakMap<T, {ref : WeakRef<T>, value : J | null}>()
-  #refSet = new Set()
+export default class IterableWeakMap<T extends WeakKey, J> {
+  #weakMap = new WeakMap<T, {ref : WeakRef<T>, value : J}>()
+  #refSet = new Set<WeakRef<T>>()
   #registry = new FinalizationRegistry(this.#cleanup.bind(this))
   #cleanup(value : any) { this.#refSet.delete(value) }
   #size = 0
@@ -15,17 +15,17 @@ export default class IterableWeakMap<T extends WeakKey, J extends WeakKey> {
   has(key : T) { return this.#weakMap.has(key) }
   set(key : T, value : J) {
     let entry = this.#weakMap.get(key)
-    if(!entry) {
+    if(entry == undefined) {
       const ref = new WeakRef(key)
       this.#registry.register(key, ref, key)
       entry = {ref, value: null}
       this.#weakMap.set(key, entry)
       this.#refSet.add(ref)
     }
-    
     this.#size++
-
-    entry.value = value
+    
+    if(entry?.value)
+      entry.value = value
     return this
   }
   delete(key : T) {
@@ -41,7 +41,7 @@ export default class IterableWeakMap<T extends WeakKey, J extends WeakKey> {
     return true
   }
   clear() {
-    for(const ref of this.#refSet as Set<WeakRef<J>>) {
+    for(const ref of this.#refSet) {
       const el = ref.deref()
       if(el !== undefined)
         this.#registry.unregister(el)
@@ -52,24 +52,24 @@ export default class IterableWeakMap<T extends WeakKey, J extends WeakKey> {
     this.#size = 0
   }
   *entries() {
-    for(const ref of this.#refSet as Set<WeakRef<J>>) {
+    for(const ref of this.#refSet) {
       const el = ref.deref()
       if(el !== undefined)
-        yield [el, this.#weakMap.get(el).value]
+        yield [el, this.#weakMap?.get(el)?.value] as [T, J]
     }
   }
   *keys() {
-    for(const ref of this.#refSet as Set<WeakRef<T>>) {
+    for(const ref of this.#refSet) {
       const el = ref.deref()
       if(el !== undefined)
         yield el
     }
   }
   *values() {
-    for(const ref of this.#refSet as Set<WeakRef<J>>) {
+    for(const ref of this.#refSet) {
       const el = ref.deref()
       if(el !== undefined)
-        yield this.#weakMap.get(el).value
+        yield this.#weakMap.get(el)?.value
     }
   }
   forEach(callbackFn : (value : J, key? : T, thisType? : any) => void, thisArg? : any) {

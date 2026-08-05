@@ -37,7 +37,7 @@ await pg.start()
 
 export const client = await pg.getPgClient().connect()
 const subUserEvents = new EventEmitter()
-const activeUsers: { [key: string]: IterableWeakMap<WebSocket, { log : number }> | undefined } = {}
+const activeUsers: { [key: string]: IterableWeakMap<WebSocket, { log? : number, ws : WebSocket }> | undefined } = {}
 
 if (databaseInitialised)
     await client.query(await readFile('./init.sql').then(o => o.toString()))
@@ -69,17 +69,15 @@ const startBot = async (id : number, ownerUUID : string) => {
     new Worker('./bot.ts', { workerData: {id, ownerUUID} })
 }
 subUserEvents.addListener('history_update', payload => {
-    const [id, log] = JSON.parse(payload) as [string, { sequence? : number, timestamp : number, data : string[], owneruuid : string, logLevel : string, id? : number }]
+    const [id, log] = JSON.parse(payload) as [string, { sequence? : number, timestamp : number, data : string[], owneruuid : string, logLevel : string }]
     const activeUser = activeUsers[log.owneruuid]
     if(!activeUser)
         return
 
     delete log.sequence
     delete log.owneruuid
-
-    log.id = Number(id)
     
-    Array.from(activeUser?.keys()).forEach(ws => 
+    Array.from(activeUser).forEach(({ws, log}) => 
         ws.send(JSON.stringify([UserAction.log, log])))
 })
 subUserEvents.addListener('sub_user_update', payload => {
@@ -117,7 +115,7 @@ wss.addListener('connection', async (ws, { headers }) => {
         return ws.close(4000)
 
     activeUsers[uuid] ??= new IterableWeakMap()
-    activeUsers[uuid].set(ws, {})
+    activeUsers[uuid].set(ws, { ws })
 
     ws.send(JSON.stringify([UserAction.get, ...await client.query('Select name, plugins, state, serverType, server, id from sub_users WHERE ownerUUID=$1', [uuid]).then((q: any) => q.rows)]))
     ws.addEventListener("message", async ({ data }) => {
@@ -144,8 +142,14 @@ wss.addListener('connection', async (ws, { headers }) => {
                 await client.query('DELETE FROM sub_users WHERE ownerUUID=$1 AND id=$2', [uuid, obj])
                 break
             case UserAction.log: //FIXME: HOLY SHIT YOU ARE DUMB
-                await client.query(`DELETE FROM history_${Number(obj)} WHERE ownerUUID=$1`, [uuid])
-                activeUsers[uuid]?.get(ws)
+                let logInfo = await client.query(`SELECT history_${Number(obj)} WHERE ownerUUID=$1`, [uuid]).then(e => e.rows)
+                let activeUser = activeUsers[uuid]?.get(ws)
+
+                if(!activeUser)
+                    return
+
+                activeUser.log = Number(obj)
+                 ws.send(JSON.stringify([UserAction.log, ...logInfo]))
                 break
         }
     })
