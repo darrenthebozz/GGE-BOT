@@ -15,7 +15,7 @@ import UserAction from './modules/CUserAction.ts'
 
 export const address = new URL("ws://127.0.0.1:8080")
 
-const debug = 1
+const debug = 0
 const debugPostgres = 0
 const workingPath = join(tmpdir(), 'ggeBot')
 
@@ -37,14 +37,15 @@ await pg.start()
 
 export const client = await pg.getPgClient().connect()
 const subUserEvents = new EventEmitter()
-const activeUsers: { [key: string]: IterableWeakMap<WebSocket, { log? : number, ws : WebSocket }> | undefined } = {}
+interface ActiveUser { logSubuserID? : number, ws : WebSocket }
+const activeUsers: { [key: string]: IterableWeakMap<WebSocket, ActiveUser> | undefined } = {}
 
 if (databaseInitialised)
     await client.query(await readFile('./init.sql').then(o => o.toString()))
 await client.query(`LISTEN sub_user_update; LISTEN history_update`)
 client.addListener('notification', ({ channel, payload }: any) => subUserEvents.emit(channel, payload))
 
-const startBot = async (id : number, ownerUUID : string) => {
+const startBot = async (id : number, owneruuid : string) => {
     try {
         await client.query(`
         CREATE SEQUENCE IF NOT EXISTS history_sequence MINVALUE 1 MAXVALUE 128 CYCLE;
@@ -66,19 +67,19 @@ const startBot = async (id : number, ownerUUID : string) => {
         FOR EACH ROW
         EXECUTE FUNCTION on_history_update_${id}();`)
     } catch (e) { console.debug(e) }
-    new Worker('./bot.ts', { workerData: {id, ownerUUID} })
+    new Worker('./bot.ts', { workerData: {id, owneruuid: owneruuid} })
 }
 subUserEvents.addListener('history_update', payload => {
-    const [id, log] = JSON.parse(payload) as [string, { sequence? : number, timestamp : number, data : string[], owneruuid : string, logLevel : string }]
+    const [id, log] = JSON.parse(payload) as [number, { sequence : number, timestamp : number, data : string[], owneruuid : string, logLevel : string }]
     const activeUser = activeUsers[log.owneruuid]
     if(!activeUser)
         return
 
-    delete log.sequence
-    delete log.owneruuid
+    delete (log as any).sequence
+    delete (log as any).owneruuid
     
-    Array.from(activeUser).forEach(({ws, log}) => 
-        ws.send(JSON.stringify([UserAction.log, log])))
+    activeUser.forEach(({ws, logSubuserID}) => 
+        id == logSubuserID && ws.send(JSON.stringify([UserAction.log, log])))
 })
 subUserEvents.addListener('sub_user_update', payload => {
     const [oldUser, newUser] = JSON.parse(payload) as [IUser, IUser]
@@ -90,7 +91,7 @@ subUserEvents.addListener('sub_user_update', payload => {
     if (userChanges.state == true)
         startBot(newUser.id, newUser.owneruuid)
 
-    const activeUser = activeUsers[newUser.ownerUUID]
+    const activeUser = activeUsers[newUser.owneruuid]
 
     if(!activeUser)
         return
@@ -113,17 +114,19 @@ wss.addListener('connection', async (ws, { headers }) => {
 
     if (!uuid || !await client.query('Select uuid from users WHERE uuid=$1', [uuid]).then((r: any) => r.rows[0]?.uuid))
         return ws.close(4000)
+    
+    const activeUser = { ws } as ActiveUser
 
     activeUsers[uuid] ??= new IterableWeakMap()
-    activeUsers[uuid].set(ws, { ws })
+    activeUsers[uuid].set(ws, activeUser)
 
-    ws.send(JSON.stringify([UserAction.get, ...await client.query('Select name, plugins, state, serverType, server, id from sub_users WHERE ownerUUID=$1', [uuid]).then((q: any) => q.rows)]))
+    ws.send(JSON.stringify([UserAction.get, ...await client.query('Select name, plugins, state, serverType, server, id from sub_users WHERE owneruuid=$1', [uuid]).then((q: any) => q.rows)]))
     ws.addEventListener("message", async ({ data }) => {
         const [action, obj]: [number, any] = safeParse(data.toString())
 
         switch (action) {
             case UserAction.add:
-                await client.query('INSERT INTO sub_users(name, loginToken, plugins, serverType, server, ownerUUID) VALUES($2,$3,$4,$5,$6,$1)',
+                await client.query('INSERT INTO sub_users(name, loginToken, plugins, serverType, server, owneruuid) VALUES($2,$3,$4,$5,$6,$1)',
                     [uuid, ...Object.values(obj)])
                 break
             case UserAction.change: {
@@ -135,22 +138,24 @@ wss.addListener('connection', async (ws, { headers }) => {
                     (obj.state ? `state=$${i++},` : '') +
                     (obj.serverType ? `serverType=$${i++},` : '') +
                     (obj.server ? `server=$${i++}` : '')
-                ).replace(/\,$/, '') + " WHERE ownerUUID=$1 AND id=$2", [uuid, ...Object.values(obj)])
+                ).replace(/\,$/, '') + " WHERE owneruuid=$1 AND id=$2", [uuid, ...Object.values(obj)])
                 break
             }
             case UserAction.delete:
-                await client.query('DELETE FROM sub_users WHERE ownerUUID=$1 AND id=$2', [uuid, obj])
+                await client.query('DELETE FROM sub_users WHERE owneruuid=$1 AND id=$2', [uuid, obj])
                 break
             case UserAction.log: //FIXME: HOLY SHIT YOU ARE DUMB
-                let logInfo = await client.query(`SELECT history_${Number(obj)} WHERE ownerUUID=$1`, [uuid]).then(e => e.rows)
-                let activeUser = activeUsers[uuid]?.get(ws)
+                try {
+                    let logInfo = await client.query(`SELECT history_${Number(obj)} WHERE owneruuid=$1`, [uuid]).then(e => e.rows)
 
-                if(!activeUser)
-                    return
+                    ws.send(JSON.stringify([UserAction.log, ...logInfo]))
+                    break
+                }
+                catch (e) {
+                    console.debug(e)
+                }
 
-                activeUser.log = Number(obj)
-                 ws.send(JSON.stringify([UserAction.log, ...logInfo]))
-                break
+                activeUser.logSubuserID = Number(obj)
         }
     })
 })

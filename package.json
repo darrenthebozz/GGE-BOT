@@ -10,21 +10,21 @@
     "i18n": "^0.15.3",
     "limiter": "^3.0.0",
     "node-cache": "^5.1.2",
-    "npm-check-updates": "^22.2.9",
+    "npm-check-updates": "^23.0.1",
     "pretty-time": "^1.1.0",
     "pureimage": "^0.4.20",
     "secure-json-parse": "^4.1.0",
     "sharp": "^0.35.3",
     "turl": "^1.1.2",
-    "undici": "^8.8.0",
-    "ws": "^8.21.1",
+    "undici": "^8.10.0",
+    "ws": "^8.21.2",
     "xml2js": "^0.6.2"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
     "@types/i18n": "^0.13.12",
-    "@types/node": "^26.1.1",
-    "@types/pg": "^8.20.0"
+    "@types/node": "^26.1.2",
+    "@types/pg": "^8.20.4"
   },
   "allowScripts": {
     "bufferutil@4.1.0": true,

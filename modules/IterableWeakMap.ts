@@ -18,14 +18,14 @@ export default class IterableWeakMap<T extends WeakKey, J> {
     if(entry == undefined) {
       const ref = new WeakRef(key)
       this.#registry.register(key, ref, key)
-      entry = {ref, value: null}
+      entry = {ref, value}
       this.#weakMap.set(key, entry)
       this.#refSet.add(ref)
-    }
-    this.#size++
-    
-    if(entry?.value)
+    } else 
       entry.value = value
+    
+    this.#size++
+      
     return this
   }
   delete(key : T) {

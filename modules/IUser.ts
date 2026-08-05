@@ -7,7 +7,7 @@ export default interface User {
     loginToken: string,
     plugins: { [key: string]: PluginOptionType }
     state: boolean,
-    serverType: 'default' | 'horizon' | 'outerRealm' | 'outerRealm&horizon'
+    servertype: 'default' | 'horizon' | 'outerRealm' | 'outerRealm&horizon'
     server: number
     [key: string]: any
 }
