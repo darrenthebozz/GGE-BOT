@@ -20,22 +20,17 @@ END $$ LANGUAGE PLPGSQL;
 CREATE FUNCTION on_sub_user_delete()
 RETURNS TRIGGER AS $$
 BEGIN
-   PERFORM pg_notify('sub_user_delete', OLD.id::TEXT);
+   PERFORM pg_notify('sub_user_delete', '[' || OLD.id::TEXT || ',"' || OLD.owneruuid || '"]');
    EXECUTE 'DROP TABLE IF EXISTS ' || quote_ident('log_history_' || OLD.id::text);
    RETURN NEW;
 END $$ LANGUAGE PLPGSQL;
 
 CREATE TRIGGER sub_user_update
-AFTER UPDATE ON sub_users
+BEFORE INSERT OR UPDATE ON sub_users
 FOR EACH ROW
 EXECUTE FUNCTION on_sub_user_update();
 
-CREATE TRIGGER sub_user_update2
-AFTER INSERT ON sub_users
-FOR EACH ROW
-EXECUTE FUNCTION on_sub_user_update();
-
-CREATE TRIGGER sub_user_update3
+CREATE TRIGGER sub_user_delete
 AFTER DELETE ON sub_users
 FOR EACH ROW
 EXECUTE FUNCTION on_sub_user_delete();

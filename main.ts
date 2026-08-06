@@ -42,7 +42,7 @@ const activeUsers: { [key: string]: IterableWeakMap<WebSocket, ActiveUser> | und
 
 if (databaseInitialised)
     await client.query(await readFile('./init.sql').then(o => o.toString()))
-await client.query(`LISTEN sub_user_update; LISTEN history_update`)
+await client.query(`LISTEN sub_user_update; LISTEN history_update; LISTEN sub_user_delete`)
 client.addListener('notification', ({ channel, payload }: any) => subUserEvents.emit(channel, payload))
 
 const startBot = async (id : number, owneruuid : string) => {
@@ -56,12 +56,14 @@ const startBot = async (id : number, owneruuid : string) => {
         data      TEXT[] NOT NULL,
         logLevel  VerbosityLevel NOT NULL,
         owneruuid TEXT NOT NULL);
+        
         CREATE FUNCTION on_history_update_${id}()
         RETURNS TRIGGER AS $$
         BEGIN
         PERFORM pg_notify('history_update', '[' || '${id},' || row_to_json(NEW.*)::TEXT || ']');
         RETURN NEW;
         END $$ LANGUAGE PLPGSQL;
+
         CREATE TRIGGER history_${id}
         AFTER INSERT OR UPDATE ON history_${id}
         FOR EACH ROW
@@ -90,16 +92,17 @@ subUserEvents.addListener('sub_user_update', payload => {
 
     if (userChanges.state == true)
         startBot(newUser.id, newUser.owneruuid)
-
-    const activeUser = activeUsers[newUser.owneruuid]
-
-    if(!activeUser)
-        return
-
-    Array.from(activeUser.keys()).forEach(ws => 
+    
+    Array.from(activeUsers[newUser.owneruuid]?.keys() ?? []).forEach(ws => 
         ws.send(JSON.stringify([UserAction.change, userChanges])))
 })
 
+subUserEvents.addListener('sub_user_delete', payload => {
+    const [id, owneruuid] = JSON.parse(payload) as [string, string]
+
+    Array.from(activeUsers[owneruuid]?.keys() ?? []).forEach(ws => 
+        ws.send(JSON.stringify([UserAction.delete, Number(id)])))
+})
 await client.query('Select id, state, owneruuid from sub_users').then((r: any) => r.rows.forEach(({ id, state, owneruuid }: { id: number, state: boolean, owneruuid : string }) =>
     state ? startBot(id, owneruuid) : undefined))
 
@@ -146,16 +149,11 @@ wss.addListener('connection', async (ws, { headers }) => {
                 break
             case UserAction.log: //FIXME: HOLY SHIT YOU ARE DUMB
                 try {
-                    let logInfo = await client.query(`SELECT history_${Number(obj)} WHERE owneruuid=$1`, [uuid]).then(e => e.rows)
-
-                    ws.send(JSON.stringify([UserAction.log, ...logInfo]))
-                    break
+                    ws.send(JSON.stringify([UserAction.log, ...await client.query(`SELECT history_${Number(obj)} WHERE owneruuid=$1`, [uuid]).then(e => e.rows)]))
                 }
-                catch (e) {
-                    console.debug(e)
-                }
-
+                catch (e) { console.debug(e) }
                 activeUser.logSubuserID = Number(obj)
+                break
         }
     })
 })

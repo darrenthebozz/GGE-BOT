@@ -16,15 +16,9 @@ import UserAction from '../../../modules/CUserAction.ts'
 import User from '../../../modules/IUser.ts'
 import ws from '../js/webSocket.ts'
 
-const lang = await(await fetch("/lang/en")).json() as { [key: string] : string }
+const lang = fetch("/lang/en").then(e => e.json()) as Promise<{ [key: string] : string }>
 
-onMounted(initFlowbite)
-
-const isShowModal = ref(false)
 const users = shallowRef<Array<Ref<User>>>([])
-
-const closeModal = () => isShowModal.value = false
-const showModal = () => isShowModal.value = true
 
 ws.addEventListener("message", ({ data }: any) => {
   const [action, ...obj] : [Number, any] = JSON.parse(data.toString())
@@ -32,13 +26,23 @@ ws.addEventListener("message", ({ data }: any) => {
     case UserAction.get:
       users.value = obj.map((user) => ref<User>(user))
       break
-    case UserAction.change:
+    case UserAction.change: {
       const user = users.value.find(user => user.value.id == obj[0].id)
       if(user == undefined) {
-        return (users.value.push(obj[0]), triggerRef(users))
+        return (users.value.push(ref<User>(obj[0])), triggerRef(users))
       }
       Object.assign(user.value, obj[0])
       break
+    }
+    case UserAction.delete: {
+      const userIndex = users.value.findIndex(user => user.value.id == obj[0])
+      if(userIndex == undefined)
+        break
+
+      console.debug(users.value.splice(userIndex, 1))
+      triggerRef(users)
+      break
+    }
   }
 })
 
@@ -49,6 +53,12 @@ ws.addEventListener("close", ({ code }) => {
   }
 })
 
+const isShowModal = ref(false)
+const closeModal = () => isShowModal.value = false
+const showModal = () => isShowModal.value = true
+
+onMounted(initFlowbite)
+onMounted(() => ws.reconnect())
 </script>
 <template>
   <div class="w-full flex flex-row-reverse">

@@ -67,4 +67,13 @@ test("Create User", { timeout: 10000 }, () => new Promise(resolve => {
 test("Get log", { timeout: 10000 }, () => new Promise(resolve => {
     ws.send(JSON.stringify([CUserAction.log, 1]))
     messageHandler.once(CUserAction.log.toString(), resolve)
+}))
+
+test("Delete User", { timeout: 10000 }, () => new Promise(resolve => {
+    ws.send(JSON.stringify([CUserAction.delete, 1]))
+
+    messageHandler.once(CUserAction.delete.toString(), (id : number) => {
+        assert.strictEqual(id, 1)
+        resolve()
+    })
 })).then(() => setTimeout(() => process.exit(0), 5000))
