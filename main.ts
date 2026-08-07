@@ -15,7 +15,7 @@ import UserAction from './modules/CUserAction.ts'
 
 export const address = new URL("ws://127.0.0.1:8080")
 
-const debug = 0
+const debug = 1
 const debugPostgres = 0
 const workingPath = join(tmpdir(), 'ggeBot')
 
@@ -147,12 +147,15 @@ wss.addListener('connection', async (ws, { headers }) => {
             case UserAction.delete:
                 await client.query('DELETE FROM sub_users WHERE owneruuid=$1 AND id=$2', [uuid, obj])
                 break
-            case UserAction.log: //FIXME: HOLY SHIT YOU ARE DUMB
-                try {
-                    ws.send(JSON.stringify([UserAction.log, ...await client.query(`SELECT history_${Number(obj)} WHERE owneruuid=$1`, [uuid]).then(e => e.rows)]))
-                }
-                catch (e) { console.debug(e) }
+            case UserAction.log:
                 activeUser.logSubuserID = Number(obj)
+                if(!isNaN(activeUser.logSubuserID)) {
+                    try {
+                        ws.send(JSON.stringify([UserAction.log, 
+                            ...(await client.query(`SELECT * from history_${activeUser.logSubuserID} WHERE owneruuid=$1`, [uuid]).then(e => e.rows))]))
+                    }
+                    catch (e) { console.debug(e) }
+                }
                 break
         }
     })

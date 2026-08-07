@@ -13,9 +13,13 @@ import VueCountdown from '@chenfengyuan/vue-countdown'
 import PluginView from './plugin-view.vue'
 import ws from '../js/webSocket.ts'
 import UserAction from '../../../modules/CUserAction.ts'
-const { closeModal, lang } : 
-    { readonly closeModal? : Function, readonly lang? : { [key : string] : string } } = defineProps(['closeModal', 'lang']) 
-if(closeModal == undefined) throw new Error("Define close Modal")
+import { FwbButton, FwbModal } from 'flowbite-vue'
+
+const isShowModal = ref(false)
+const closeModal = () => isShowModal.value = false
+const showModal = () => isShowModal.value = true
+
+const { lang } : { readonly lang? : { [key : string] : string } } = defineProps(['lang']) 
 
 const name = ref('')
 const password = ref('')
@@ -67,41 +71,58 @@ const closePage = () => {
 const totalPages = 3
 </script>
 <template>
-    <div class="flex flex-col border-b border-default pb-4 md:pb-5 text-left" v-show="currentPage == 1">
-        <div class="p-2 pt-0">
-            <label for="username" class="block mb-2.5 text-sm font-medium text-heading w-fit">Username</label>
-            <input type="text" name="username" v-model="name"
-                class="bg-neutral-secondary-medium border border-default-medium text-heading text-sm rounded-base focus:ring-brand focus:border-brand block w-full px-3 py-2.5 shadow-xs placeholder:text-body"
-                required />
-        </div>
-        <div class="p-2 pt-0">
-            <label for="password" class="block mb-2.5 text-sm font-medium text-heading w-fit">Password</label>
-            <input type="password" v-model="password" name="password" autocomplete="on"
-                class="bg-neutral-secondary-medium border border-default-medium text-heading text-sm rounded-base focus:ring-brand focus:border-brand block w-full px-3 py-2.5 shadow-xs placeholder:text-body"
-                placeholder="••••••••" required />
-        </div>
-        <fwb-select v-model="server" :options="instances" label="Server" class="p-2 pt-0 min-w-fit" placeholder="" required
-            selectClass="bg-neutral-secondary-medium border border-default-medium text-heading text-sm rounded-base focus:ring-brand focus:border-brand block w-full px-3 py-2.5 shadow-xs placeholder:text-body" />
-        <fwb-alert v-if="typeof log === 'string'" type="danger" class="mr-2 ml-2 mt-1">
-            {{ log }}
-        </fwb-alert>
-        <fwb-alert v-else-if="log !== undefined && log.type == 'TIMEOUT'" type="warning" class="mr-2 ml-2 mt-1">
-            <vue-countdown :time="log.value * 1000" v-slot="{ minutes, seconds }">
-                Waiting {{ minutes }} minutes, {{ seconds }} seconds before continuing
-            </vue-countdown>
-        </fwb-alert>
+    <div class="w-full flex flex-row-reverse">
+        <fwb-button @click="showModal"
+            class="p-2 md:p-4 text-heading text-sm border border-default rounded-base shadow hover:text-blue-600"
+            color="transparent"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                stroke-width="1.5" stroke="currentColor" class="size-6">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+        </fwb-button>
     </div>
-    <div class="flex flex-col border-b border-default pb-4 md:pb-5 text-left" v-show="currentPage == 2">
-         <PluginView/>
-    </div>
-    <fwb-pagination v-model="currentPage" :layout="'navigation'" :total-pages="totalPages" large class="mt-4">
-        <template #prev-button hidden />
-        <template #next-button="{ disabled, increasePage }">
-            <button
-                class="disabled:cursor-not-allowed ml-0 m-auto flex h-8 items-center justify-center border border-purple-300 bg-purple-200 px-4 py-4 leading-tight text-gray-500 first:rounded-l-lg last:rounded-r-lg hover:bg-purple-300 hover:text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
-                :disabled="disabled" @click="currentPage == totalPages - 1 ? closePage() : validateUser().then(increasePage)">
-                {{ currentPage != totalPages -1 ? "Next" : "Save"}}
-            </button>
+
+    <fwb-modal @close="closeModal" v-show="isShowModal" header-class="bg-neutral-primary-soft"
+        bodyClass="bg-neutral-primary-soft text-white text-right" size="5xl" wrapper-class="max-w-svw md:m-4 m-0">
+        <template #body>
+            <div class="flex flex-col border-b border-default pb-4 md:pb-5 text-left" v-show="currentPage == 1">
+                <div class="p-2 pt-0">
+                    <label for="username" class="block mb-2.5 text-sm font-medium text-heading w-fit">Username</label>
+                    <input type="text" name="username" v-model="name"
+                        class="bg-neutral-secondary-medium border border-default-medium text-heading text-sm rounded-base focus:ring-brand focus:border-brand block w-full px-3 py-2.5 shadow-xs placeholder:text-body"
+                        required />
+                </div>
+                <div class="p-2 pt-0">
+                    <label for="password" class="block mb-2.5 text-sm font-medium text-heading w-fit">Password</label>
+                    <input type="password" v-model="password" name="password" autocomplete="on"
+                        class="bg-neutral-secondary-medium border border-default-medium text-heading text-sm rounded-base focus:ring-brand focus:border-brand block w-full px-3 py-2.5 shadow-xs placeholder:text-body"
+                        placeholder="••••••••" required />
+                </div>
+                <fwb-select v-model="server" :options="instances" label="Server" class="p-2 pt-0 min-w-fit"
+                    placeholder="" required
+                    selectClass="bg-neutral-secondary-medium border border-default-medium text-heading text-sm rounded-base focus:ring-brand focus:border-brand block w-full px-3 py-2.5 shadow-xs placeholder:text-body" />
+                <fwb-alert v-if="typeof log === 'string'" type="danger" class="mr-2 ml-2 mt-1">
+                    {{ log }}
+                </fwb-alert>
+                <fwb-alert v-else-if="log !== undefined && log.type == 'TIMEOUT'" type="warning" class="mr-2 ml-2 mt-1">
+                    <vue-countdown :time="log.value * 1000" v-slot="{ minutes, seconds }">
+                        Waiting {{ minutes }} minutes, {{ seconds }} seconds before continuing
+                    </vue-countdown>
+                </fwb-alert>
+            </div>
+            <div class="flex flex-col border-b border-default pb-4 md:pb-5 text-left" v-show="currentPage == 2">
+                <PluginView />
+            </div>
+            <fwb-pagination v-model="currentPage" :layout="'navigation'" :total-pages="totalPages" large class="mt-4">
+                <template #prev-button hidden />
+                <template #next-button="{ disabled, increasePage }">
+                    <button
+                        class="disabled:cursor-not-allowed ml-0 m-auto flex h-8 items-center justify-center border border-purple-300 bg-purple-200 px-4 py-4 leading-tight text-gray-500 first:rounded-l-lg last:rounded-r-lg hover:bg-purple-300 hover:text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                        :disabled="disabled"
+                        @click="currentPage == totalPages - 1 ? closePage() : validateUser().then(increasePage)">
+                        {{ currentPage != totalPages - 1 ? "Next" : "Save" }}
+                    </button>
+                </template>
+            </fwb-pagination>
         </template>
-    </fwb-pagination>
+    </fwb-modal>
 </template>

@@ -5,11 +5,11 @@ import UserAction from '../../../modules/CUserAction.ts'
 import webSocket from '../js/webSocket.ts'
 import type { Ref } from 'vue'
 import type User from '../../../modules/IUser.ts'
+import Log from './log.vue'
 
 const props = defineProps(['user']) as { user : Ref<User> }
 const user = reactive(props.user)
 const server = props.user.value.server
-const log = () => alert("test")
 const settings = () => {}
 const changeUserState = () => 
         webSocket.send(JSON.stringify([UserAction.change, { id: user.value.id, state: user.value.state }]))
@@ -27,15 +27,7 @@ const deleteUser = () =>
                                 <dd class="mr-2 text-lg font-medium">{{ server }}</dd>
                         </div>
                         <div class="ml-auto mb-auto mt-auto mr-1 whitespace-nowrap flex flex-row gap-2">
-                                        <svg 
-                                                v-on:click="log"
-                                                class="w-5 h-5 hover:text-blue-600" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                                fill="none" viewBox="0 0 16 20">
-                                                <path stroke="currentColor" stroke-linecap="round"
-                                                        stroke-linejoin="round" stroke-width="1"
-                                                        d="M1 17V2a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H3a2 2 0 0 0-2 2Zm0 0a2 2 0 0 0 2 2h12M5 15V1m8 18v-4">
-                                                </path>
-                                        </svg>
+                                        <Log :userID="user.id"/>
                                         <svg 
                                                 v-on:click="settings"
                                                 class="w-5 h-5 hover:text-blue-600" aria-hidden="true"
