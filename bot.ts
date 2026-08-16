@@ -13,7 +13,7 @@ function mngLog(logLevel : "INFO" | "WARNING" | "ERROR" | "DEBUG", ...msg : Arra
     const fileName = path.basename(getCallSites(6)[2]?.scriptName).slice(0, -3)
     const message = ['[',fileName,'] ', ...(msg.map(m => m instanceof Error ? m.message : String(m)))]
 
-    client.query(`INSERT INTO history_${id} (sequence, timestamp, data, logLevel, owneruuid) VALUES (nextval('history_sequence'), default, $1, $2, $3) 
+    client.query(`INSERT INTO history_${id} (sequence, timestamp, data, logLevel, owneruuid) VALUES (nextval('history_sequence_${id}'), default, $1, $2, $3) 
                  ON CONFLICT (sequence) DO UPDATE SET timestamp = now(), data = $1, logLevel = $2;`, [message, logLevel, owneruuid])
 }
 
@@ -26,5 +26,4 @@ setInterval(() => {
     console.info("is info")
     console.warn("is warn")
     console.error("is error")
-    console.debug("is debug")
-}, 1000)
+}, 3000)

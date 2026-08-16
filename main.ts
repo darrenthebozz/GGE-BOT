@@ -48,7 +48,7 @@ client.addListener('notification', ({ channel, payload }: any) => subUserEvents.
 const startBot = async (id : number, owneruuid : string) => {
     try {
         await client.query(`
-        CREATE SEQUENCE IF NOT EXISTS history_sequence MINVALUE 1 MAXVALUE 128 CYCLE;
+        CREATE SEQUENCE IF NOT EXISTS history_sequence_${id} MINVALUE 0 MAXVALUE 127 CYCLE;
         
         CREATE TABLE IF NOT EXISTS history_${id} (
         sequence  INTEGER PRIMARY key,
@@ -57,14 +57,14 @@ const startBot = async (id : number, owneruuid : string) => {
         logLevel  VerbosityLevel NOT NULL,
         owneruuid TEXT NOT NULL);
         
-        CREATE FUNCTION on_history_update_${id}()
+        CREATE OR REPLACE FUNCTION on_history_update_${id}()
         RETURNS TRIGGER AS $$
         BEGIN
         PERFORM pg_notify('history_update', '[' || '${id},' || row_to_json(NEW.*)::TEXT || ']');
         RETURN NEW;
         END $$ LANGUAGE PLPGSQL;
 
-        CREATE TRIGGER history_${id}
+        CREATE OR REPLACE TRIGGER history_${id}
         AFTER INSERT OR UPDATE ON history_${id}
         FOR EACH ROW
         EXECUTE FUNCTION on_history_update_${id}();`)
@@ -76,8 +76,7 @@ subUserEvents.addListener('history_update', payload => {
     const activeUser = activeUsers[log.owneruuid]
     if(!activeUser)
         return
-
-    delete (log as any).sequence
+    
     delete (log as any).owneruuid
     
     activeUser.forEach(({ws, logSubuserID}) => 
@@ -149,13 +148,13 @@ wss.addListener('connection', async (ws, { headers }) => {
                 break
             case UserAction.log:
                 activeUser.logSubuserID = Number(obj)
-                if(!isNaN(activeUser.logSubuserID)) {
-                    try {
-                        ws.send(JSON.stringify([UserAction.log, 
-                            ...(await client.query(`SELECT * from history_${activeUser.logSubuserID} WHERE owneruuid=$1`, [uuid]).then(e => e.rows))]))
-                    }
-                    catch (e) { console.debug(e) }
+                if (isNaN(activeUser.logSubuserID))
+                    break
+                try {
+                    ws.send(JSON.stringify([UserAction.log, 
+                    ...(await client.query(`SELECT * from history_${activeUser.logSubuserID} WHERE owneruuid=$1`, [uuid]).then(e => e.rows))]))
                 }
+                catch (e) { console.debug(e) }
                 break
         }
     })

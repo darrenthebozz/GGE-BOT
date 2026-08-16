@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, reactive } from 'vue'
+import { ref, reactive } from 'vue'
 import ws from '../js/webSocket.ts'
 import { FwbModal } from 'flowbite-vue'
 import UserAction from '../../../modules/CUserAction.ts'
@@ -10,18 +10,35 @@ const { userID } : { readonly userID? : number } = defineProps(['userID'])
 const isShowModal = ref(false)
 const closeModal = () => (isShowModal.value = false, ws.send(JSON.stringify([UserAction.log, null])))
 const showModal = () => (isShowModal.value = true, ws.send(JSON.stringify([UserAction.log, userID])))
-
-const logs = reactive([]) as Array<ILog>
-
+const logs = reactive<Array<ILog>>([]) 
+const maxLogSize = 6
 ws.addEventListener("message", ({ data }: any) => {
-  const [action, ...obj] : [Number, any] = JSON.parse(data.toString())
+  const [action, ...obj] : [Number, ...Array<ILog>] = JSON.parse(data.toString())
   switch (action) {
     case UserAction.log:
-        logs.push(...obj)
+        obj.forEach((log) => {
+            // if(logs.length > maxLogSize)
+                // logs.shift()
+            logs.push(log)
+        })
+        // obj.sort(({timestamp : a}, {timestamp : b}) => new Date(a).getTime() - new Date(b).getTime()).forEach((log) => {
+        //     // if(logs.length > 12)
+        //     //     logs.shift()
+            
+        //     // logs.push( log)
+            
+        //     // logs.splice(index, 1, log)
+        // })
         break
   }
 })
-
+let i = 0
+const logColors = {
+    "INFO": "green",
+    "WARNING": "yellow",
+    "ERROR": "red",
+    "DEBUG": "green"
+}
 </script>
 <template>
     <svg v-on:click="showModal" class="w-5 h-5 
@@ -33,11 +50,10 @@ ws.addEventListener("message", ({ data }: any) => {
     <fwb-modal @close="closeModal" v-show="isShowModal" header-class="bg-neutral-primary-soft"
         bodyClass="bg-neutral-primary-soft text-white text-right" size="5xl" wrapper-class="max-w-svw md:m-4 m-0">
         <template #body>
-            <div v-for="log in logs">
-                <div class='text-left text-blue-600' v-if="log.loglevel == 'INFO'">{{ log.data.join('') }}</div>
-                <div class='text-left text-yellow-600' v-if="log.loglevel == 'WARNING'">{{ log.data.join('') }}</div>
-                <div class='text-left text-red-600' v-if="log.loglevel == 'ERROR'">{{ log.data.join('') }}</div>
-                <div class='text-left text-green-600' v-if="log.loglevel == 'DEBUG'">{{ log.data.join('') }}</div>
+            <div v-for="{data, sequence, loglevel, id} in logs" :class='`text-left text-${logColors[loglevel]}-600`' :key="id">
+                <li>{{ sequence }} {{ i++ }}</li>
+
+                <!-- {{ data.join('') }}  -->
             </div>
         </template>
     </fwb-modal>

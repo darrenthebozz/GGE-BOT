@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { ref } from 'vue'
 import { computedAsync } from '@vueuse/core'
 import VueCountdown from '@chenfengyuan/vue-countdown'
@@ -11,7 +11,13 @@ import {
   FwbAccordionPanel,
 } from 'flowbite-vue'
 
-const { player } = defineProps(['player'])
+import type User from '../../../modules/IUser.ts'
+
+const { user } = defineProps({
+  user: {
+    type : Object,
+  }
+})
 const activePlugins = [
   "Barrons",
   "Fortress",
@@ -19,19 +25,19 @@ const activePlugins = [
   "The Another plugin",
   "Butt face :P",
 ];
-const resources = Object.entries(player.resources ?? {}).map(([name, amount]) => ({ name, amount }))
+const resources = Object.entries(user.resources ?? {}).map(([name, amount]) => ({ name, amount }))
 const activeTab = ref("0")
 const capitalizeFirstLetter = o =>
   String(o).charAt(0).toLocaleUpperCase() + String(o).slice(1)
 import assets from '../assets.json'
 
-const items = computedAsync(async () => (await fetch("/items")).json())
+const items = computedAsync(() => fetch("/items").then(a => a.json()))
 </script>
 <template>
   <fwb-tabs v-model="activeTab"
     ulClass="flex-nowrap overflow-x-auto max-w-svw whitespace-nowrap scrollbar-color scrollbar-thumb-[#2D2E36] scrollbar-track-[#05040C] scrollbar-thin"
     buttonClass="p-0 ml-2 mr-2 mb-2 mt-1 border-b-2 rounded-t-base" variant="underline">
-    <fwb-tab v-for="(castle, index) in player.castles" :name="String(index)" :title="castle.areaInfo.extraData[7]"
+    <fwb-tab v-for="(castle, index) in user.castles" :name="String(index)" :title="castle.areaInfo.extraData[7]"
       class="md:p-3">
       <dt class="text-body">Plugins</dt>
       <div

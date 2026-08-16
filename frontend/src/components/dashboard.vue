@@ -8,15 +8,15 @@
 import { onMounted, ref, shallowRef, triggerRef } from 'vue'
 import type { Ref } from 'vue'
 import { initFlowbite } from 'flowbite'
+import { computedAsync } from '@vueuse/core'
 
 import SubUser from "./sub-user.vue"
-import Settings from "./subuser-settings.vue"
+import Setup from "./subuser-setup.vue"
 import UserAction from '../../../modules/CUserAction.ts'
 import User from '../../../modules/IUser.ts'
 import ws from '../js/webSocket.ts'
 
-const lang = fetch("/lang/en").then(e => e.json()) as Promise<{ [key: string] : string }>
-
+const lang = computedAsync<{ [key: string] : string | undefined }>(() => fetch("/lang/en").then(a => a.json()))
 const users = shallowRef<Array<Ref<User>>>([])
 
 ws.addEventListener("message", ({ data }: any) => {
@@ -56,7 +56,7 @@ onMounted(initFlowbite)
 onMounted(() => ws.reconnect())
 </script>
 <template>
-  <Settings/>
+  <Setup :lang="lang"/>
   <span v-for="user in users" class="overflow-x-hidden">
     <SubUser :user="user" />
   </span>

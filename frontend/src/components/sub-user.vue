@@ -67,7 +67,7 @@ const deleteUser = () =>
                                         </svg>
                         </div>
                 </div>
-                <CastleView :player="user" />
+                <CastleView :user="user" />
                 <svg 
                         v-on:click="deleteUser()"
                         class="m-auto mr-2.5 md:mt-4 mt-2 w-5.5 h-5.5 hover:text-blue-600 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
