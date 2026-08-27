@@ -7,38 +7,37 @@ import type ILog from '../../../modules/ILog.ts'
 
 const { userID } : { readonly userID? : number } = defineProps(['userID']) 
 
-const isShowModal = ref(false)
-const closeModal = () => (isShowModal.value = false, ws.send(JSON.stringify([UserAction.log, null])))
+const closeModal = () => (isShowModal.value = false, logs.length = 0, ws.send(JSON.stringify([UserAction.log])))
 const showModal = () => (isShowModal.value = true, ws.send(JSON.stringify([UserAction.log, userID])))
+
+const isShowModal = ref(false)
 const logs = reactive<Array<ILog>>([]) 
-const maxLogSize = 6
-ws.addEventListener("message", ({ data }: any) => {
-  const [action, ...obj] : [Number, ...Array<ILog>] = JSON.parse(data.toString())
-  switch (action) {
-    case UserAction.log:
-        obj.forEach((log) => {
-            // if(logs.length > maxLogSize)
-                // logs.shift()
-            logs.push(log)
-        })
-        // obj.sort(({timestamp : a}, {timestamp : b}) => new Date(a).getTime() - new Date(b).getTime()).forEach((log) => {
-        //     // if(logs.length > 12)
-        //     //     logs.shift()
-            
-        //     // logs.push( log)
-            
-        //     // logs.splice(index, 1, log)
-        // })
-        break
-  }
-})
-let i = 0
+const maxLogSize = 128
 const logColors = {
     "INFO": "green",
     "WARNING": "yellow",
     "ERROR": "red",
     "DEBUG": "green"
 }
+
+ws.addEventListener("open", () => {
+    if(!isShowModal.value)
+        ws.send(JSON.stringify([UserAction.log, userID]))
+})
+ws.addEventListener("message", ({ data }: any) => {
+  let [action, ...obj] : [number, ...Array<ILog>] = JSON.parse(data.toString())
+    if (action == UserAction.log) {
+        obj.sort((a,b) => Date.parse(a.timestamp) - Date.parse(b.timestamp)).forEach(log => {
+            let time = new Date(log.timestamp)
+            log.timestamp = `${time.getHours()}:${time.getMinutes()}`
+            
+            if (logs.length > maxLogSize)
+                logs.shift()
+
+            logs.push(log)
+        })
+    }
+})
 </script>
 <template>
     <svg v-on:click="showModal" class="w-5 h-5 
@@ -50,10 +49,8 @@ const logColors = {
     <fwb-modal @close="closeModal" v-show="isShowModal" header-class="bg-neutral-primary-soft"
         bodyClass="bg-neutral-primary-soft text-white text-right" size="5xl" wrapper-class="max-w-svw md:m-4 m-0">
         <template #body>
-            <div v-for="{data, sequence, loglevel, id} in logs" :class='`text-left text-${logColors[loglevel]}-600`' :key="id">
-                <li>{{ sequence }} {{ i++ }}</li>
-
-                <!-- {{ data.join('') }}  -->
+            <div v-for="{data, loglevel, timestamp} in logs" :class='`text-left text-${logColors[loglevel]}-600`'>
+                [{{timestamp}}] {{ data.join('') }}
             </div>
         </template>
     </fwb-modal>

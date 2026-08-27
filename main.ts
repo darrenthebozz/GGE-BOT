@@ -152,7 +152,7 @@ wss.addListener('connection', async (ws, { headers }) => {
                     break
                 try {
                     ws.send(JSON.stringify([UserAction.log, 
-                    ...(await client.query(`SELECT * from history_${activeUser.logSubuserID} WHERE owneruuid=$1`, [uuid]).then(e => e.rows))]))
+                        ...(await client.query(`SELECT timestamp, data, logLevel from history_${activeUser.logSubuserID} WHERE owneruuid=$1`, [uuid]).then(e => e.rows))]))
                 }
                 catch (e) { console.debug(e) }
                 break
