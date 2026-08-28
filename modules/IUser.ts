@@ -8,6 +8,6 @@ export default interface User {
     plugins: { [key: string]: PluginOptionType }
     state: boolean,
     servertype: 'default' | 'horizon' | 'outerRealm' | 'outerRealm&horizon'
-    server: number
+    serverID: number
     [key: string]: any
 }

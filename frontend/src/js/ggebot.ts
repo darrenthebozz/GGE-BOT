@@ -41,13 +41,11 @@ export default function login(username: string, password: string, gameServer: st
             try { obj = JSON.parse(obj) }
             catch { }
 
-            if(cmd == "gbd") {
+            if(cmd == "gbd")
                 for (const [key, value] of Object.entries(obj))
                     xtHandler.dispatchEvent(new CustomEvent(key, { detail: { obj : value, r : 0 } }))
-                return
-            }
-                
-            xtHandler.dispatchEvent(new CustomEvent(cmd, { detail: { obj, r } }))
+            else
+                xtHandler.dispatchEvent(new CustomEvent(cmd, { detail: { obj, r } }))
         }
 
         else if (message[0] == "<") {

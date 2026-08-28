@@ -16,6 +16,7 @@ import type User from '../../../modules/IUser.ts'
 const { user } = defineProps({
   user: {
     type : Object,
+    required : true
   }
 })
 const activePlugins = [

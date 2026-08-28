@@ -6,13 +6,18 @@ import path from "node:path"
 import { EventEmitter } from "node:events"
 import { RateLimiter } from "limiter"
 import client from './modules/database.ts'
+import type IBotConfig from './modules/IBotConfig.ts'
+import type IUser from './modules/IUser.ts'
 
+const instances = await import("./modules/serverInstances.ts").then(e => e.default)
 const timeoutMultiplier = 1
-const port = 3001
+
+const { id, owneruuid, port } = workerData as IBotConfig 
+const { name, plugins, serverType, serverID } = await client.query('Select name, plugins, serverType, serverID from sub_users WHERE id=$1')
+    .then(e => e.rows[0]) as IUser
+const { server, zone } = instances.find(instance => instance.value == serverID)! 
 
 const events = new EventEmitter<(...any: any[]) => void>()
-const { id, owneruuid, gameServer, gameURL }:
-    { id: number, owneruuid: string, gameServer: string, gameURL: string } = workerData
 
 const restart = (...str: string[]) => {
     events.emit("unload")
@@ -41,7 +46,7 @@ console.debug = (...msg) => mngLog("DEBUG", msg)
 console.log("Starting Bot")
 
 const err = await fetch(`/err:${port}`).then(a => a.json()) as { [key: string]: string }
-const ws = new WebSocket(`wss://${gameURL}`)
+const ws = new WebSocket(server)
 
 ws.onopen = () => ws.send('<msg t="sys"><body action="verChk" r="0"><ver v="166"/></body></msg>')
 ws.onerror = () => close("webSocketError")
@@ -53,7 +58,7 @@ ws.onmessage = ({ data }) => {
 
     if (message[0] == "<") {
         if (message == "<msg t='sys'><body action='apiOK' r='0'></body></msg>")
-            ws.send(`<msg t="sys"><body action="login" r="0"><login z="${gameServer}"><nick><![CDATA[]]></nick><pword><![CDATA[undefined%en%0]]></pword></login></body></msg>`)
+            ws.send(`<msg t="sys"><body action="login" r="0"><login z="${zone}"><nick><![CDATA[]]></nick><pword><![CDATA[undefined%en%0]]></pword></login></body></msg>`)
         else if (message == "<msg t='sys'><body action='joinOK' r='1'><pid id='0'/><vars /><uLs r='1'></uLs></body></msg>") {
             ws.send('<msg t="sys"><body action="roundTrip" r="1"></body></msg>')
             sendXT("vck", `undefined%web-html5%<RoundHouseKick>%${(Math.random() * Number.MAX_VALUE).toFixed()}`)
@@ -79,7 +84,7 @@ const limiter = new RateLimiter({ tokensPerInterval: 5, interval: "sec" })
 
 const sendXT = (cmdName: string, paramObj: object | String) => limiter.removeTokens(1).then(() =>
     ws.send(
-        `%xt%${gameServer}%${cmdName}%1%${paramObj instanceof String ? paramObj : JSON.stringify(paramObj)}%`))
+        `%xt%${zone}%${cmdName}%1%${paramObj instanceof String ? paramObj : JSON.stringify(paramObj)}%`))
 
 let maxTimeouts = 8
 let importantErrors = 0

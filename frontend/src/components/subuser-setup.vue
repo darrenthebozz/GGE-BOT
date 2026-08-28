@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import {
-    FwbTab,
-    FwbTabs,
     FwbSelect,
     FwbPagination,
     FwbAlert
@@ -25,15 +23,11 @@ const name = ref('')
 const password = ref('')
 const log = ref()
 const server = ref("1")
-const instances = computedAsync(() => import('../../../modules/serverInstances.ts').then(i => i.default), [])
-console.log(instances)
+const instances = computedAsync(() => import('../../../modules/serverInstances.ts').then(i => i.default)!, [])
 const currentPage = ref(1)
 let loginToken = ""
 const validateUser = () => new Promise((resolve, reject) => {
-    if(instances.value == undefined)
-        return
-
-    const { zone, server : gameURL } = instances.value.find(({ value }) => server.value == value) ?? {} as { zone : string, server : string }
+    const { zone, server : gameURL } = instances.value.find(({ value }) => Number(server.value) == value)!
 
     return resolve(loginToken = "fake val")
     const loginEvents = login(name.value, password.value, zone, gameURL)
@@ -65,7 +59,7 @@ const closePage = () => {
         loginToken,
         plugins: {},
         serverType: 'default',
-        server : server.value
+        serverID : server.value
     }]))
 }
 const totalPages = 3
@@ -98,9 +92,10 @@ const totalPages = 3
                         placeholder="••••••••" required />
                 </div>
                 <fwb-select v-model="server" 
-                    :options="instances.map(instance => {
-                        const instanceTemp = {...instance}
+                    :options="instances.map((instance) => {
+                        const instanceTemp = {...instance} as unknown as Omit<typeof instance, 'value'> & { value : string }
                         instanceTemp.name = `${lang?.[instance.name] ?? instance.name} ${instance.serverInstance}` 
+                        instanceTemp.value = String(instanceTemp.value)
                         return instanceTemp
                     })"
                     label="Server"

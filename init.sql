@@ -7,7 +7,7 @@ CREATE TABLE sub_users (
     plugins JSON,
     state BOOLEAN DEFAULT FALSE,
     serverType ServerType,
-    server INTEGER NOT NULL
+    serverID INTEGER NOT NULL
 );
 
 CREATE FUNCTION on_sub_user_update()

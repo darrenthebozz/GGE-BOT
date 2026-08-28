@@ -109,16 +109,10 @@ export const prerender = true;
         }
     }
 
-    const $targetEl = document.getElementById(
-        "user-menu-dropdown",
-    ) as HTMLElement;
-    const $triggerEl = document.getElementById(
-        "dropdown-button",
-    ) as HTMLElement;
-    const $button = document.getElementById("user-toggle") as HTMLElement;
-    const $submitButton = document.getElementById(
-        "submit-button",
-    ) as HTMLElement;
+    const $targetEl = document.getElementById("user-menu-dropdown")!;
+    const $triggerEl = document.getElementById("dropdown-button")!;
+    const $button = document.getElementById("user-toggle")!;
+    const $submitButton = document.getElementById("submit-button")!;
 
     const LoginUIState = {
         signIn: "Sign In",

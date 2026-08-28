@@ -48,7 +48,7 @@ test("Create User", { timeout: 10000 }, () => new Promise(resolve => {
         loginToken: "test",
         plugins: {},
         servertype: 'default',
-        server: 1
+        serverID: 1
     }
     
     ws.send(JSON.stringify([CUserAction.add, user]))
@@ -57,7 +57,7 @@ test("Create User", { timeout: 10000 }, () => new Promise(resolve => {
         assert.strictEqual(user.name, user2.name)
         assert.strictEqual(JSON.stringify(user.plugins), JSON.stringify(user2.plugins))
         assert.strictEqual(user.servertype, user2.servertype)
-        assert.strictEqual(user.server, user2.server)
+        assert.strictEqual(user.serverID, user2.serverID)
 
         ws.send(JSON.stringify([CUserAction.change, { id: user2.id, state: true }]))
         resolve()

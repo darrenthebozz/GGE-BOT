@@ -42,7 +42,7 @@
     </div>
 </div>
 <script>
-    const $signOut = document.getElementById("sign-out") as HTMLElement;
+    const $signOut = document.getElementById("sign-out")!;
     $signOut.onclick = async function () {
         document.cookie = `uuid=`;
         window.location.replace("/");
