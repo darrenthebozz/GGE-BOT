@@ -13,22 +13,22 @@ import { computedAsync } from '@vueuse/core'
 import SubUser from "./sub-user.vue"
 import Setup from "./subuser-setup.vue"
 import UserAction from '../../../modules/CUserAction.ts'
-import User from '../../../modules/IUser.ts'
+import { IUser } from '../../../types.ts'
 import ws from '../js/webSocket.ts'
 
 const lang = computedAsync<{ [key: string] : string | undefined }>(() => fetch("/lang/en").then(a => a.json()))
-const users = shallowRef<Array<Ref<User>>>([])
+const users = shallowRef<Array<Ref<IUser>>>([])
 
 ws.addEventListener("message", ({ data }: any) => {
   const [action, ...obj] : [Number, any] = JSON.parse(data.toString())
   switch (action) {
     case UserAction.get:
-      users.value = obj.map((user) => ref<User>(user))
+      users.value = obj.map((user) => ref<IUser>(user))
       break
     case UserAction.change: {
       const user = users.value.find(user => user.value.id == obj[0].id)
       if(user == undefined) {
-        return (users.value.push(ref<User>(obj[0])), triggerRef(users))
+        return (users.value.push(ref<IUser>(obj[0])), triggerRef(users))
       }
       Object.assign(user.value, obj[0])
       break

@@ -1,16 +1,6 @@
-const servers = new DOMParser().parseFromString(await fetch("/server").then(a => a.text()), "application/xml")
+import type {IBotConfig, IInstance} from '../types.ts'
 
-export default Array.from(servers.getElementsByTagName("instance") ?? []).map(obj => {
-    const nodes = Array.from(obj.childNodes)
+const { port } = await import("node:worker_threads").then(e => e?.workerData as IBotConfig | undefined)
+    .catch(console.debug) ?? { port : "" }
 
-    const instanceLocaId = nodes.find(({ nodeName }) => nodeName == "instanceLocaId")?.childNodes[0].nodeValue!
-    const instanceName = nodes.find(({ nodeName }) => nodeName == "instanceName")?.childNodes[0].nodeValue!
-
-    return {
-        value: Number(obj.getAttribute("value")),
-        name: instanceLocaId,
-        serverInstance : instanceName,
-        zone: nodes.find(({ nodeName }) => nodeName == "zone")?.childNodes[0].nodeValue!,
-        server: nodes.find(({ nodeName }) => nodeName == "server")?.childNodes[0].nodeValue!,
-    }
-})
+export default await fetch(`/server:${port}`).then(a => a.json()) as IInstance[]

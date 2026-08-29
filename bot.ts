@@ -8,13 +8,15 @@ import { join } from "node:path"
 import { EventEmitter } from "node:events"
 import { RateLimiter } from "limiter"
 import client from './modules/database.ts'
-import type IBotConfig from './modules/IBotConfig.ts'
-import type IUser from './modules/IUser.ts'
 import exampleConfig from './ggeConfig.json' with { type: 'json' }
+import type {IBotConfig, IUser, IInstance} from './types.ts'
 
-const err = await import('./err.json').then(e => e.default as typeof e.default & Record<string, undefined> )
-const { id, workingPath } = workerData as IBotConfig
-const instances = await import("./modules/serverInstances.ts").then(e => e.default)
+const err = await import('./err.json', { with: { type: "json" } }).then(e => 
+    e.default as typeof e.default & Record<string, undefined> )
+const { id, workingPath, port } = workerData as IBotConfig
+
+const instances = await fetch(`/server:${port}`).then(a => a.json()) as IInstance[]
+
 const configPath = join(workingPath, "ggeConfig.json")
 var config = await readFile(configPath).then(a => a.toJSON()) as Partial<typeof exampleConfig>
 const { name, plugins, serverType, serverID, loginToken } = (await client.query('Select name, plugins, serverType, serverID, loginToken from sub_users WHERE id=$1')

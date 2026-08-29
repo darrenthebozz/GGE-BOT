@@ -1,1 +1,0 @@
-export default interface IBotConfig { id: number, owneruuid: string, port: string, workingPath: string }

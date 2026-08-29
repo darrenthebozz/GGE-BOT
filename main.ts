@@ -11,16 +11,14 @@ import { safeParse } from 'secure-json-parse'
 import { handler as ssrHandler } from './frontend/dist/server/entry.mjs'
 import IterableWeakMap from './modules/IterableWeakMap.ts'
 import UserAction from './modules/CUserAction.ts'
-import type IUser from './modules/IUser.ts'
-import type IBotConfig from './modules/IBotConfig.ts'
-import type ILog from './modules/ILog.ts'
 import exampleConfig from './ggeConfig.json' with { type: 'json' }
+import type { IUser, IBotConfig, ILog } from './types.ts'
 
 const workingPath = join(tmpdir(), 'ggeBot')
 const configPath = join(workingPath, "ggeConfig.json")
 try { await mkdir(workingPath) } catch (e) { console.debug(e) }
-try {
-    var config = await readFile(configPath).then(a => a.toJSON()) as Partial<typeof exampleConfig>
+try { 
+    var config = JSON.parse(await readFile(configPath, 'utf-8')) as Partial<typeof exampleConfig> 
 }
 catch(e) {
     try {
@@ -91,6 +89,7 @@ subUserEvents.addListener('history_update', payload => {
     const activeUser = activeUsers[log.owneruuid!]
 
     delete log.owneruuid
+    delete log.sequence
 
     activeUser?.forEach(({ ws, logSubuserID }) =>
         id == logSubuserID && ws.send(JSON.stringify([UserAction.log, log])))
@@ -141,7 +140,7 @@ wss.addListener('connection', async (ws, { headers }) => {
                     (obj.name ? `name=$${i++},` : '') +
                     (obj.loginToken ? `loginToken=$${i++},` : '') +
                     (obj.plugins ? `plugins=$${i++},` : '') +
-                    (obj.state ? `state=$${i++},` : '') +
+                    (obj.state != undefined ? `state=$${i++},` : '') +
                     (obj.serverType ? `serverType=$${i++},` : '') +
                     (obj.serverID ? `serverID=$${i++}` : '')
                 ).replace(/\,$/, '') + " WHERE owneruuid=$1 AND id=$2", [uuid, ...Object.values(obj)])

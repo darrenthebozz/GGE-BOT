@@ -11,8 +11,6 @@ import {
   FwbAccordionPanel,
 } from 'flowbite-vue'
 
-import type User from '../../../modules/IUser.ts'
-
 const { user } = defineProps({
   user: {
     type : Object,

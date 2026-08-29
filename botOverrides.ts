@@ -2,7 +2,7 @@ import { getCallSites } from "node:util"
 import { basename } from "node:path"
 import { workerData } from "node:worker_threads"
 import client from './modules/database.ts'
-import type IBotConfig from './modules/IBotConfig.ts'
+import type { IBotConfig } from './types.ts'
 
 const { id, owneruuid } = workerData as IBotConfig
 
@@ -23,8 +23,8 @@ const _setTimeout = setTimeout as any
 const setTimeoutOverride = (handler: TimerHandler, timeout?: number | undefined, ...args: any[]) =>
     _setTimeout(handler, timeout, ...args).unref()
 setTimeoutOverride.__promisify__ = _setTimeout.__promisify__
-window.setTimeout = setTimeoutOverride
+setTimeout = setTimeoutOverride
 
 const _setInterval = setInterval as any
-window.setInterval = (handler: TimerHandler, timeout?: number | undefined, ...args: any[]) =>
+setInterval = (handler: TimerHandler, timeout?: number | undefined, ...args: any[]) =>
     _setInterval(handler, timeout, ...args).unref()

@@ -4,7 +4,7 @@ import CastleView from './castle-view.vue'
 import UserAction from '../../../modules/CUserAction.ts'
 import webSocket from '../js/webSocket.ts'
 import type { Ref } from 'vue'
-import type User from '../../../modules/IUser.ts'
+import type { IUser } from '../../../types.ts'
 import Log from './log.vue'
 
 const props = defineProps(['user']) as { user : Ref<User> }

@@ -1,1 +1,0 @@
-export default { toggle: 0, number: 1 } as const
