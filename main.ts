@@ -1,4 +1,4 @@
-import { mkdir, readFile } from 'node:fs/promises'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { Worker } from 'node:worker_threads'
 import { EventEmitter } from 'node:events'
 import { tmpdir } from 'node:os'
@@ -13,21 +13,35 @@ import IterableWeakMap from './modules/IterableWeakMap.ts'
 import UserAction from './modules/CUserAction.ts'
 import type IUser from './modules/IUser.ts'
 import type IBotConfig from './modules/IBotConfig.ts'
+import type ILog from './modules/ILog.ts'
+import exampleConfig from './ggeConfig.json' with { type: 'json' }
 
-export const address = new URL("ws://127.0.0.1:8080")
-const debug = 1
-const debugPostgres = 0
 const workingPath = join(tmpdir(), 'ggeBot')
-
-console.debug = debug ? console.debug : () => { }
-
+const configPath = join(workingPath, "ggeConfig.json")
 try { await mkdir(workingPath) } catch (e) { console.debug(e) }
+try {
+    var config = await readFile(configPath).then(a => a.toJSON()) as Partial<typeof exampleConfig>
+}
+catch(e) {
+    try {
+        await writeFile(configPath, JSON.stringify(exampleConfig))
+    }
+    catch(e) {
+        console.error("Could not create a config at workingPath.\n", e)
+        process.exit(1)
+    }    
+    config = exampleConfig
+}
+export const address = new URL(`ws://127.0.0.1:${config.port}`)
+
+console.debug = config.debug ? console.debug : () => { }
+
 const databaseDir = join(workingPath, './db')
 const pg = new EmbeddedPostgres({
     databaseDir,
-    port: 5436,
+    port: config.postgresPort,
     persistent: true,
-    onLog: debugPostgres ? console.debug : () => { }
+    onLog: config.postgresDebug ? console.debug : () => { }
 })
 let databaseInitialised = false
 
@@ -69,24 +83,22 @@ const startBot = async (id: number, owneruuid: string) => {
         FOR EACH ROW
         EXECUTE FUNCTION on_history_update_${id}();`)
     } catch (e) { console.debug(e) }
-    new Worker('./bot.ts', { workerData: { id, owneruuid, port: address.port } satisfies IBotConfig })
+    new Worker('./bot.ts', { workerData: { id, owneruuid, port: address.port, workingPath } satisfies IBotConfig })
 }
 
 subUserEvents.addListener('history_update', payload => {
-    const [id, log] = JSON.parse(payload) as [number, { sequence: number, timestamp: number, data: string[], owneruuid: string, logLevel: string }]
-    const activeUser = activeUsers[log.owneruuid]
-    if (!activeUser)
-        return
+    const [id, log] = JSON.parse(payload) as [number, Partial<ILog>]
+    const activeUser = activeUsers[log.owneruuid!]
 
-    delete (log as any).owneruuid
+    delete log.owneruuid
 
-    activeUser.forEach(({ ws, logSubuserID }) =>
+    activeUser?.forEach(({ ws, logSubuserID }) =>
         id == logSubuserID && ws.send(JSON.stringify([UserAction.log, log])))
 })
 subUserEvents.addListener('sub_user_update', payload => {
     const [oldUser, newUser] = JSON.parse(payload) as [IUser, IUser]
-    const userChanges = oldUser ? Object.entries(oldUser).reduce((obj: any, [key, value]) =>
-        (newUser[key] != value && (obj[key] = newUser[key]), obj), {}) : newUser
+    const userChanges = (oldUser ? Object.entries(oldUser).reduce((obj: any, [key, value]) =>
+        (newUser[key] != value && (obj[key] = newUser[key]), obj), {}) : newUser) as Partial<IUser>
 
     userChanges.id = newUser.id
 

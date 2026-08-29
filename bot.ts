@@ -1,24 +1,27 @@
 process.on("uncaughtException", console.error)
 
+import './botOverrides.ts'
+
+import { readFile } from 'node:fs/promises'
 import { workerData } from "node:worker_threads"
-import { getCallSites } from "node:util"
-import path from "node:path"
+import { join } from "node:path"
 import { EventEmitter } from "node:events"
 import { RateLimiter } from "limiter"
 import client from './modules/database.ts'
 import type IBotConfig from './modules/IBotConfig.ts'
 import type IUser from './modules/IUser.ts'
+import exampleConfig from './ggeConfig.json' with { type: 'json' }
 
+const err = await import('./err.json').then(e => e.default as typeof e.default & Record<string, undefined> )
+const { id, workingPath } = workerData as IBotConfig
 const instances = await import("./modules/serverInstances.ts").then(e => e.default)
-const timeoutMultiplier = 1
-
-const { id, owneruuid, port } = workerData as IBotConfig 
-const { name, plugins, serverType, serverID } = await client.query('Select name, plugins, serverType, serverID from sub_users WHERE id=$1')
-    .then(e => e.rows[0]) as IUser
-const { server, zone } = instances.find(instance => instance.value == serverID)! 
-
+const configPath = join(workingPath, "ggeConfig.json")
+var config = await readFile(configPath).then(a => a.toJSON()) as Partial<typeof exampleConfig>
+const { name, plugins, serverType, serverID, loginToken } = (await client.query('Select name, plugins, serverType, serverID, loginToken from sub_users WHERE id=$1')
+    .then(e => e.rows[0])) as IUser
+const { server, zone } = instances.find(instance => instance.value == serverID)!
 const events = new EventEmitter<(...any: any[]) => void>()
-
+const subUserEvents = new EventEmitter<(...any: any[]) => void>()
 const restart = (...str: string[]) => {
     events.emit("unload")
     console.error(...str)
@@ -30,29 +33,29 @@ const close = (...str: string[]) => {
     process.exit(0)
 }
 
-function mngLog(logLevel: "INFO" | "WARNING" | "ERROR" | "DEBUG", ...msg: Array<any>) {
-    const fileName = path.basename(getCallSites(6)[2]?.scriptName).slice(0, -3)
-    const message = ['[', fileName, '] ', ...(msg.map(m => m instanceof Error ? m.message : String(m)))]
+await client.query(`LISTEN sub_user_update; LISTEN sub_user_delete`)
+client.addListener('notification', ({ channel, payload }: any) => subUserEvents.emit(channel, payload))
 
-    client.query(`INSERT INTO history_${id} (sequence, timestamp, data, logLevel, owneruuid) VALUES (nextval('history_sequence_${id}'), default, $1, $2, $3) 
-                 ON CONFLICT (sequence) DO UPDATE SET timestamp = now(), data = $1, logLevel = $2;`, [message, logLevel, owneruuid])
-}
+subUserEvents.addListener('sub_user_update', payload => {
+    const [oldUser, newUser] = JSON.parse(payload) as [IUser, IUser]
+    const userChanges = (oldUser ? Object.entries(oldUser).reduce((obj: any, [key, value]) =>
+        (newUser[key] != value && (obj[key] = newUser[key]), obj), {}) : newUser) as Partial<IUser>
 
-console.log = console.info = (...msg) => mngLog("INFO", msg)
-console.warn = (...msg) => mngLog("WARNING", msg)
-console.error = (...msg) => mngLog("ERROR", msg)
-console.debug = (...msg) => mngLog("DEBUG", msg)
+    userChanges.id = newUser.id
+
+    userChanges.plugins
+})
+subUserEvents.on('sub_user_delete', () => process.exit(0))
 
 console.log("Starting Bot")
 
-const err = await fetch(`/err:${port}`).then(a => a.json()) as { [key: string]: string }
 const ws = new WebSocket(server)
 
 ws.onopen = () => ws.send('<msg t="sys"><body action="verChk" r="0"><ver v="166"/></body></msg>')
 ws.onerror = () => close("webSocketError")
 ws.onclose = () => close("webSocketClosed")
 
-const xtHandler = new EventEmitter<(obj: string | object, result: string | number) => void>()
+const xtHandler = new EventEmitter<(obj: string | object, result: string) => void>()
 ws.onmessage = ({ data }) => {
     let message = data.toString() as string
 
@@ -66,8 +69,8 @@ ws.onmessage = ({ data }) => {
         return
     }
     let [, , cmd, , _result, obj] = message.split("%") as [any, any, string, any, number, string]
-    const result = err[_result] ?? String(_result)
-
+    const result = err[String(_result)] ?? String(_result)
+    const a = err[9999];
     try { obj = JSON.parse(obj) }
     catch (e) { console.debug(e) }
 
@@ -81,7 +84,6 @@ ws.onmessage = ({ data }) => {
 }
 
 const limiter = new RateLimiter({ tokensPerInterval: 5, interval: "sec" })
-
 const sendXT = (cmdName: string, paramObj: object | String) => limiter.removeTokens(1).then(() =>
     ws.send(
         `%xt%${zone}%${cmdName}%1%${paramObj instanceof String ? paramObj : JSON.stringify(paramObj)}%`))
@@ -106,7 +108,7 @@ const waitForResult = (key: string, timeout: number, func?: (data: object | stri
                 console.warn(key, result)
 
                 reject(result)
-            }, timeout * timeoutMultiplier)
+            }, timeout * (config.timeoutMultiplier ?? 1))
         }
 
         const helperFunction = (data: object | string, _result: string) => {
@@ -135,3 +137,62 @@ const waitForResult = (key: string, timeout: number, func?: (data: object | stri
         xtHandler.addListener(key, helperFunction)
     })
 
+xtHandler.on("rlu", () => ws.send('<msg t="sys"><body action="autoJoin" r="-1"></body></msg>'))
+async function retry() {
+    if (serverType != "default")
+        return sendXT("tlep", JSON.stringify({ TLT: loginToken }))
+    sendXT("lli", JSON.stringify({
+        "CONM": 350,
+        "RTM": 57,
+        "ID": 0,
+        "PL": 1,
+        "NOM": name,
+        "LT": loginToken,
+        "LANG": "en",
+        "DID": "0",
+        "AID": "17254677223212351",
+        "KID": "",
+        "REF": "https://empire.goodgamestudios.com",
+        "GCI": "",
+        "SID": 9,
+        "PLFID": 1
+    }))
+}
+
+xtHandler.on("vck", retry)
+
+let loginAttempts = 0
+xtHandler.on("lli", async (obj, result) => {
+    if (result == "LOGIN_COOLDOWN_ACTIVE") {
+        console.log("retryLogin", obj.CD, "retryLoginSeconds")
+        setTimeout(retry, obj.CD * 1000)
+        return
+    }
+
+    if (result == "IS_BANNED") {
+        console.log("retryLogin", obj.CD, "retryLoginSeconds")
+        console.log("retryLogin", (obj.RS / 60 / 60).toFixed(2), "retryLoginHours")
+        setTimeout(retry, obj.RS * 1000)
+        return
+    }
+
+    if (result == "ALL_OK") {
+        const timer = setTimeout(() => {
+            console.warn("loggedIn", "loggedInWithoutEventData")
+            console.warn("featuresMightNotWork")
+            events.emit("load")
+        }, 30 * 1000 * (config.timeoutMultiplier ?? 1))
+
+        xtHandler.once("sei", () => {
+            console.log("loggedIn")
+            setTimeout(() => events.emit("load"), 4500)
+            clearTimeout(timer)
+        })
+        setInterval(sendXT, 1000 * 60, "pin", "<RoundHouseKick>").unref()
+        return
+    }
+
+    if (result == "INVALID_LOGIN_TOKEN" && loginAttempts++ < 30)
+        retry()
+    else close()
+})
