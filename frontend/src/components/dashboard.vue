@@ -9,12 +9,11 @@ import { onMounted, ref, shallowRef, triggerRef } from 'vue'
 import type { Ref } from 'vue'
 import { initFlowbite } from 'flowbite'
 import { computedAsync } from '@vueuse/core'
-
 import SubUser from "./sub-user.vue"
 import Setup from "./subuser-setup.vue"
 import UserAction from '../../../modules/CUserAction.ts'
-import { IUser } from '../../../types.ts'
 import ws from '../js/webSocket.ts'
+import type { IUser } from '../../../types.ts'
 
 const lang = computedAsync<{ [key: string] : string | undefined }>(() => fetch("/lang/en").then(a => a.json()))
 const users = shallowRef<Array<Ref<IUser>>>([])

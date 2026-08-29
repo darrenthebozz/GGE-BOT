@@ -23,7 +23,7 @@ export interface Plugin {
     options: PluginOption[]
     state : boolean
 }
-export interface IBotConfig { id: number, owneruuid: string, port: string, workingPath: string }
+export interface IBotConfig { id: number, owneruuid: string, url: string, workingPath: string }
 export interface IInstance {
       value: number
       name: string
@@ -33,12 +33,12 @@ export interface IInstance {
 }
 export interface IUser {
     id: number
-    ownerUUID: string
+    owneruuid: string
     name: string
-    loginToken: string
+    logintoken: string
     plugins: { [key: string]: PluginOptionType }
     state: boolean
-    serverType: 'default' | 'horizon' | 'outerRealm' | 'outerRealm&horizon'
-    serverID: number
-    [key: string]: any
+    servertype: 'default' | 'horizon' | 'outerRealm' | 'outerRealm&horizon'
+    serverid: number
+    // [key: string]: any
 }

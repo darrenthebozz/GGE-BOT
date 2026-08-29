@@ -3,13 +3,13 @@ import { reactive } from 'vue'
 import CastleView from './castle-view.vue'
 import UserAction from '../../../modules/CUserAction.ts'
 import webSocket from '../js/webSocket.ts'
+import Log from './log.vue'
 import type { Ref } from 'vue'
 import type { IUser } from '../../../types.ts'
-import Log from './log.vue'
 
-const props = defineProps(['user']) as { user : Ref<User> }
+const props = defineProps(['user']) as { user : Ref<IUser> }
 const user = reactive(props.user)
-const server = props.user.value.server
+const server = props.user.value.serverid
 const settings = () => {}
 const changeUserState = () => 
         webSocket.send(JSON.stringify([UserAction.change, { id: user.value.id, state: user.value.state }]))

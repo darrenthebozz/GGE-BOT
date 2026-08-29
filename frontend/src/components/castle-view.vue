@@ -10,6 +10,7 @@ import {
   FwbAccordionHeader,
   FwbAccordionPanel,
 } from 'flowbite-vue'
+import assets from '../assets.json'
 
 const { user } = defineProps({
   user: {
@@ -23,13 +24,10 @@ const activePlugins = [
   "Flee",
   "The Another plugin",
   "Butt face :P",
-];
+]
 const resources = Object.entries(user.resources ?? {}).map(([name, amount]) => ({ name, amount }))
 const activeTab = ref("0")
-const capitalizeFirstLetter = o =>
-  String(o).charAt(0).toLocaleUpperCase() + String(o).slice(1)
-import assets from '../assets.json'
-
+const capitalizeFirstLetter = o => String(o).charAt(0).toLocaleUpperCase() + String(o).slice(1)
 const items = computedAsync(() => fetch("/items").then(a => a.json()))
 </script>
 <template>

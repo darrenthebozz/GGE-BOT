@@ -6,8 +6,7 @@ import CUserAction from './modules/CUserAction.ts'
 import EventEmitter from 'node:events'
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import type ILog from './modules/ILog.ts'
-import type IUser from './modules/IUser.ts'
+import type {ILog, IUser} from './types.ts'
 
 const workingPath = join(tmpdir(), 'ggeBot')
 
@@ -57,7 +56,7 @@ test("Create User", { timeout: 10000 }, () => new Promise(resolve => {
         assert.strictEqual(user.name, user2.name)
         assert.strictEqual(JSON.stringify(user.plugins), JSON.stringify(user2.plugins))
         assert.strictEqual(user.servertype, user2.servertype)
-        assert.strictEqual(user.serverID, user2.serverID)
+        assert.strictEqual(user.serverID, user2.serverid)
 
         ws.send(JSON.stringify([CUserAction.change, { id: user2.id, state: true }]))
         resolve()

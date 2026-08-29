@@ -2,11 +2,8 @@ import type { APIRoute } from 'astro'
 try {
   var { sharp } = await import('sharp')
 }
-catch(e) {
-  console.warn(e)
-}
+catch(e) { console.warn(e) }
 export const prerender = false
-
 const cacheTime = 60 * 60 * 5
 
 export const GET: APIRoute = async ctx => {

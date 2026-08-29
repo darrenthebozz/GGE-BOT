@@ -18,7 +18,8 @@ const workingPath = join(tmpdir(), 'ggeBot')
 const configPath = join(workingPath, "ggeConfig.json")
 try { await mkdir(workingPath) } catch (e) { console.debug(e) }
 try { 
-    var config = JSON.parse(await readFile(configPath, 'utf-8')) as Partial<typeof exampleConfig> 
+    const userConfig = Object.assign(exampleConfig, JSON.parse(await readFile(configPath, 'utf-8')) as Partial<typeof exampleConfig>)
+    var config = Object.assign(userConfig, { url : new URL(userConfig.url) })
 }
 catch(e) {
     try {
@@ -28,9 +29,10 @@ catch(e) {
         console.error("Could not create a config at workingPath.\n", e)
         process.exit(1)
     }    
-    config = exampleConfig
+    config = Object.assign(exampleConfig, { url : new URL(exampleConfig.url) })
 }
-export const address = new URL(`ws://127.0.0.1:${config.port}`)
+
+export const address = new URL(`ws://127.0.0.1:${config.url.port}`)
 
 console.debug = config.debug ? console.debug : () => { }
 
@@ -81,7 +83,7 @@ const startBot = async (id: number, owneruuid: string) => {
         FOR EACH ROW
         EXECUTE FUNCTION on_history_update_${id}();`)
     } catch (e) { console.debug(e) }
-    new Worker('./bot.ts', { workerData: { id, owneruuid, port: address.port, workingPath } satisfies IBotConfig })
+    new Worker('./bot.ts', { workerData: { id, owneruuid, url: config.url.toString(), workingPath } satisfies IBotConfig })
 }
 
 subUserEvents.addListener('history_update', payload => {
@@ -95,7 +97,7 @@ subUserEvents.addListener('history_update', payload => {
         id == logSubuserID && ws.send(JSON.stringify([UserAction.log, log])))
 })
 subUserEvents.addListener('sub_user_update', payload => {
-    const [oldUser, newUser] = JSON.parse(payload) as [IUser, IUser]
+    const [oldUser, newUser] = JSON.parse(payload) as [IUser & { [key : string] : any}, IUser & { [key : string] : any}]
     const userChanges = (oldUser ? Object.entries(oldUser).reduce((obj: any, [key, value]) =>
         (newUser[key] != value && (obj[key] = newUser[key]), obj), {}) : newUser) as Partial<IUser>
 
@@ -125,7 +127,7 @@ wss.addListener('connection', async (ws, { headers }) => {
     activeUsers[uuid] ??= new IterableWeakMap()
     activeUsers[uuid].set(ws, activeUser)
 
-    ws.send(JSON.stringify([UserAction.get, ...await client.query('Select name, plugins, state, serverType, serverID, id from sub_users WHERE owneruuid=$1', [uuid]).then((q: any) => q.rows)]))
+    ws.send(JSON.stringify([UserAction.get, ...await client.query('Select name, plugins, state, serverType, serverID, id from sub_users WHERE owneruuid=$1', [uuid]).then((a: any) => a.rows)]))
     ws.addEventListener("message", async ({ data }) => {
         const [action, obj]: [number, any] = safeParse(data.toString())
 
@@ -161,7 +163,7 @@ wss.addListener('connection', async (ws, { headers }) => {
         }
     })
 })
-http.createServer({}, app).listen(address.port).on('upgrade', (req, socket, head) => wss.handleUpgrade(req, socket, head, socket =>
+http.createServer({}, app).listen(config.url.port).on('upgrade', (req, socket, head) => wss.handleUpgrade(req, socket, head, socket =>
     wss.emit('connection', socket, req)))
 
 await client.query('Select id, state, owneruuid from sub_users').then((r: any) => r.rows.forEach(({ id, state, owneruuid }: { id: number, state: boolean, owneruuid: string }) =>

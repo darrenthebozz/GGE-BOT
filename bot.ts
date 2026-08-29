@@ -11,51 +11,54 @@ import client from './modules/database.ts'
 import exampleConfig from './ggeConfig.json' with { type: 'json' }
 import type {IBotConfig, IUser, IInstance} from './types.ts'
 
-const err = await import('./err.json', { with: { type: "json" } }).then(e => 
-    e.default as typeof e.default & Record<string, undefined> )
-const { id, workingPath, port } = workerData as IBotConfig
-
-const instances = await fetch(`/server:${port}`).then(a => a.json()) as IInstance[]
-
-const configPath = join(workingPath, "ggeConfig.json")
-var config = await readFile(configPath).then(a => a.toJSON()) as Partial<typeof exampleConfig>
-const { name, plugins, serverType, serverID, loginToken } = (await client.query('Select name, plugins, serverType, serverID, loginToken from sub_users WHERE id=$1')
-    .then(e => e.rows[0])) as IUser
-const { server, zone } = instances.find(instance => instance.value == serverID)!
 const events = new EventEmitter<(...any: any[]) => void>()
 const subUserEvents = new EventEmitter<(...any: any[]) => void>()
 const restart = (...str: string[]) => {
     events.emit("unload")
-    console.error(...str)
+    if(str.length > 0)
+        console.error(...str)
     process.exit(0)
 }
 const close = (...str: string[]) => {
     events.emit("unload")
-    console.error(...str)
+    if(str.length > 0)
+        console.error(...str)
     process.exit(0)
 }
-
 await client.query(`LISTEN sub_user_update; LISTEN sub_user_delete`)
 client.addListener('notification', ({ channel, payload }: any) => subUserEvents.emit(channel, payload))
 
 subUserEvents.addListener('sub_user_update', payload => {
-    const [oldUser, newUser] = JSON.parse(payload) as [IUser, IUser]
+    const [oldUser, newUser] = JSON.parse(payload) as [IUser & { [key : string] : any}, IUser & { [key : string] : any}]
     const userChanges = (oldUser ? Object.entries(oldUser).reduce((obj: any, [key, value]) =>
         (newUser[key] != value && (obj[key] = newUser[key]), obj), {}) : newUser) as Partial<IUser>
 
     userChanges.id = newUser.id
+    if(userChanges.plugins) {
+        debugger
+    }
 
-    userChanges.plugins
 })
-subUserEvents.on('sub_user_delete', () => process.exit(0))
+subUserEvents.on('sub_user_delete', close)
 
-console.log("Starting Bot")
+const err = await import('./err.json', { with: { type: "json" } }).then(e => 
+    e.default as typeof e.default & Record<string, undefined> )
+const { id, workingPath, url } = Object.assign({ ...workerData as Omit<IBotConfig, "url"> }, {url : new URL(workerData.url)})
 
+const instances = await fetch(url.toString() + "/server").then(a => a.json()) as IInstance[]
+const configPath = join(workingPath, "ggeConfig.json")
+var config = await readFile(configPath).then(a => a.toJSON()) as Partial<typeof exampleConfig>
+const { name, plugins, servertype, serverid, logintoken } = 
+    (await client.query('SELECT name, plugins, serverType, serverID, loginToken FROM sub_users WHERE id=$1', [id])
+    .then(e => e.rows[0] as IUser))
+const { server, zone } = instances.find(instance => instance.value == serverid)!
 const ws = new WebSocket(server)
 
 ws.onopen = () => ws.send('<msg t="sys"><body action="verChk" r="0"><ver v="166"/></body></msg>')
 ws.onerror = () => close("webSocketError")
 ws.onclose = () => close("webSocketClosed")
+
+console.log("Starting Bot")
 
 const xtHandler = new EventEmitter<(obj: string | object, result: string) => void>()
 ws.onmessage = ({ data }) => {
@@ -72,7 +75,6 @@ ws.onmessage = ({ data }) => {
     }
     let [, , cmd, , _result, obj] = message.split("%") as [any, any, string, any, number, string]
     const result = err[String(_result)] ?? String(_result)
-    const a = err[9999];
     try { obj = JSON.parse(obj) }
     catch (e) { console.debug(e) }
 
@@ -141,15 +143,15 @@ const waitForResult = (key: string, timeout: number, func?: (data: object | stri
 
 xtHandler.on("rlu", () => ws.send('<msg t="sys"><body action="autoJoin" r="-1"></body></msg>'))
 async function retry() {
-    if (serverType != "default")
-        return sendXT("tlep", JSON.stringify({ TLT: loginToken }))
+    if (servertype != "default")
+        return sendXT("tlep", JSON.stringify({ TLT: logintoken }))
     sendXT("lli", JSON.stringify({
         "CONM": 350,
         "RTM": 57,
         "ID": 0,
         "PL": 1,
         "NOM": name,
-        "LT": loginToken,
+        "LT": logintoken,
         "LANG": "en",
         "DID": "0",
         "AID": "17254677223212351",

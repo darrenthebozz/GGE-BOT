@@ -1,13 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import {
-    FwbSelect,
-    FwbPagination,
-    FwbAlert
-} from 'flowbite-vue'
 import { computedAsync } from '@vueuse/core'
 import login from '../js/ggebot.ts'
-import VueCountdown from '@chenfengyuan/vue-countdown'
 import PluginView from './plugin-view.vue'
 import ws from '../js/webSocket.ts'
 import UserAction from '../../../modules/CUserAction.ts'
@@ -23,7 +17,7 @@ const name = ref('')
 const password = ref('')
 const log = ref()
 const server = ref("1")
-const instances = computedAsync(() => import('../../../modules/serverInstances.ts').then(i => i.default), [])
+const instances = computedAsync(() => import('../js/serverInstances.ts').then(i => i.default), [])
 
 const currentPage = ref(1)
 let loginToken = ""
