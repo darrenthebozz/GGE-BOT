@@ -5,52 +5,57 @@ import './botOverrides.ts'
 import { readFile } from 'node:fs/promises'
 import { workerData } from "node:worker_threads"
 import { join } from "node:path"
-import { EventEmitter } from "node:events"
 import { RateLimiter } from "limiter"
 import client from './modules/database.ts'
+import EventEmitter from './modules/EventEmitter.ts'
 import exampleConfig from './ggeConfig.json' with { type: 'json' }
-import type {IBotConfig, IUser, IInstance} from './types.ts'
+import type { IBotConfig, IUser, IInstance, IUserEvents } from './types.ts'
 
-const events = new EventEmitter<(...any: any[]) => void>()
-const subUserEvents = new EventEmitter<(...any: any[]) => void>()
+export const events = new EventEmitter<{
+    unload : string
+    load : void
+    restartPlugin : string
+    unloadPlugin : string
+}>()
+const userEvents = new EventEmitter<IUserEvents>()
 const restart = (...str: string[]) => {
     events.emit("unload")
-    if(str.length > 0)
+    if (str.length > 0)
         console.error(...str)
     process.exit(0)
 }
-const close = (...str: string[]) => {
+export const close = (...str: string[]) => {
     events.emit("unload")
-    if(str.length > 0)
+    if (str.length > 0)
         console.error(...str)
-    process.exit(0)
+    ws.close()
 }
 await client.query(`LISTEN sub_user_update; LISTEN sub_user_delete`)
-client.addListener('notification', ({ channel, payload }: any) => subUserEvents.emit(channel, payload))
+client.addListener('notification', ({ channel, payload }) => userEvents.emit(channel, payload))
 
-subUserEvents.addListener('sub_user_update', payload => {
-    const [oldUser, newUser] = JSON.parse(payload) as [IUser & { [key : string] : any}, IUser & { [key : string] : any}]
+userEvents.on('sub_user_update', payload => {
+    const [oldUser, newUser] = JSON.parse(payload) as [IUser & { [key: string]: any }, IUser & { [key: string]: any }]
     const userChanges = (oldUser ? Object.entries(oldUser).reduce((obj: any, [key, value]) =>
         (newUser[key] != value && (obj[key] = newUser[key]), obj), {}) : newUser) as Partial<IUser>
 
     userChanges.id = newUser.id
-    if(userChanges.plugins) {
+    if (userChanges.plugins) {
         debugger
     }
 
 })
-subUserEvents.on('sub_user_delete', close)
+userEvents.on('sub_user_delete', close)
 
-const err = await import('./err.json', { with: { type: "json" } }).then(e => 
-    e.default as typeof e.default & Record<string, undefined> )
-const { id, workingPath, url } = Object.assign({ ...workerData as Omit<IBotConfig, "url"> }, {url : new URL(workerData.url)})
+const err = await import('./err.json', { with: { type: "json" } }).then(e =>
+    e.default as typeof e.default & Record<string, undefined>)
+const { id, workingPath, url } = Object.assign({ ...workerData as Omit<IBotConfig, "url"> }, { url: new URL(workerData.url) })
 
 const instances = await fetch(url.toString() + "/server").then(a => a.json()) as IInstance[]
 const configPath = join(workingPath, "ggeConfig.json")
-var config = await readFile(configPath).then(a => a.toJSON()) as Partial<typeof exampleConfig>
-const { name, plugins, servertype, serverid, logintoken } = 
+export var config = await readFile(configPath).then(a => a.toJSON()) as Partial<typeof exampleConfig>
+const { name, plugins, servertype, serverid, logintoken } =
     (await client.query('SELECT name, plugins, serverType, serverID, loginToken FROM sub_users WHERE id=$1', [id])
-    .then(e => e.rows[0] as IUser))
+        .then(e => e.rows[0] as IUser))
 const { server, zone } = instances.find(instance => instance.value == serverid)!
 const ws = new WebSocket(server)
 
@@ -60,7 +65,7 @@ ws.onclose = () => close("webSocketClosed")
 
 console.log("Starting Bot")
 
-const xtHandler = new EventEmitter<(obj: string | object, result: string) => void>()
+export const xtHandler = new EventEmitter<{ [key : string] : any}>()
 ws.onmessage = ({ data }) => {
     let message = data.toString() as string
 
@@ -88,14 +93,14 @@ ws.onmessage = ({ data }) => {
 }
 
 const limiter = new RateLimiter({ tokensPerInterval: 5, interval: "sec" })
-const sendXT = (cmdName: string, paramObj: object | String) => limiter.removeTokens(1).then(() =>
+export const sendXT = (cmdName: string, paramObj: object | String) => limiter.removeTokens(1).then(() =>
     ws.send(
         `%xt%${zone}%${cmdName}%1%${paramObj instanceof String ? paramObj : JSON.stringify(paramObj)}%`))
 
 let maxTimeouts = 8
 let importantErrors = 0
 
-const waitForResult = (key: string, timeout: number, func?: (data: object | string, result: string) => boolean) =>
+export const waitForResult = (key: string, timeout: number, func?: (data: object | string, result: string) => boolean) =>
     new Promise<{ data: object | string, result: string }>((resolve, reject) => {
         if (timeout == undefined)
             reject(`waitForResult: No timeout specified`)
@@ -143,8 +148,11 @@ const waitForResult = (key: string, timeout: number, func?: (data: object | stri
 
 xtHandler.on("rlu", () => ws.send('<msg t="sys"><body action="autoJoin" r="-1"></body></msg>'))
 async function retry() {
-    if (servertype != "default")
+    if (servertype != "default") {
+        client.query('SELECT name, plugins, serverType, serverID, loginToken FROM sub_users WHERE id=$1', [id])
+
         return sendXT("tlep", JSON.stringify({ TLT: logintoken }))
+    }
     sendXT("lli", JSON.stringify({
         "CONM": 350,
         "RTM": 57,
@@ -189,7 +197,7 @@ xtHandler.on("lli", async (obj, result) => {
 
         xtHandler.once("sei", () => {
             console.log("loggedIn")
-            setTimeout(() => events.emit("load"), 4500)
+            setTimeout(events.emit, 4500, "load")
             clearTimeout(timer)
         })
         setInterval(sendXT, 1000 * 60, "pin", "<RoundHouseKick>").unref()
@@ -199,4 +207,12 @@ xtHandler.on("lli", async (obj, result) => {
     if (result == "INVALID_LOGIN_TOKEN" && loginAttempts++ < 30)
         retry()
     else close()
+})
+
+plugins.forEach(({ state, name }) => {
+    if (!state)
+        return
+    
+    try { import(`./${name}.ts`) }
+    catch (e) { console.error(e) }
 })

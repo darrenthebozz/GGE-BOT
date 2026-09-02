@@ -1,29 +1,33 @@
 export interface ILog {
-    sequence : number,
-    timestamp : string,
-    data : string[],
-    loglevel : 'INFO' | 'WARNING' | 'ERROR' | 'DEBUG',
+    sequence : number
+    timestamp : string
+    data : string[]
+    loglevel : 'INFO' | 'WARNING' | 'ERROR' | 'DEBUG'
     owneruuid : string
 }
 export enum PluginOptionType {
     Toggle,
     Number
 }
-export interface PluginOption {
+export interface IPluginOption {
     id: string
     type: PluginOptionType
     description?: string
     value?: any
     hideLabel?: boolean
-    [key: string]: any
 }
-export interface Plugin {
+export interface IPlugin {
     name: string
     description: string
-    options: PluginOption[]
+    options: IPluginOption[]
     state : boolean
 }
-export interface IBotConfig { id: number, owneruuid: string, url: string, workingPath: string }
+export interface IBotConfig {
+    id: number
+    owneruuid: string
+    url: string
+    workingPath: string
+}
 export interface IInstance {
       value: number
       name: string
@@ -36,9 +40,13 @@ export interface IUser {
     owneruuid: string
     name: string
     logintoken: string
-    plugins: { [key: string]: PluginOptionType }
+    plugins: IPlugin[]
     state: boolean
     servertype: 'default' | 'horizon' | 'outerRealm' | 'outerRealm&horizon'
     serverid: number
-    // [key: string]: any
+}
+export interface IUserEvents { 
+    sub_user_update : string
+    sub_user_delete : string 
+    history_update : string
 }

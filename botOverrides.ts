@@ -23,8 +23,11 @@ const _setTimeout = setTimeout as any
 const setTimeoutOverride = (handler: TimerHandler, timeout?: number | undefined, ...args: any[]) =>
     _setTimeout(handler, timeout, ...args).unref()
 setTimeoutOverride.__promisify__ = _setTimeout.__promisify__
+
+//@ts-ignore
 setTimeout = setTimeoutOverride
 
 const _setInterval = setInterval as any
+//@ts-ignore
 setInterval = (handler: TimerHandler, timeout?: number | undefined, ...args: any[]) =>
     _setInterval(handler, timeout, ...args).unref()

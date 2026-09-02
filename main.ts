@@ -1,6 +1,5 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { Worker } from 'node:worker_threads'
-import { EventEmitter } from 'node:events'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import http from 'node:http'
@@ -11,8 +10,9 @@ import { safeParse } from 'secure-json-parse'
 import { handler as ssrHandler } from './frontend/dist/server/entry.mjs'
 import IterableWeakMap from './modules/IterableWeakMap.ts'
 import UserAction from './modules/CUserAction.ts'
+import EventEmitter from './modules/EventEmitter.ts'
 import exampleConfig from './ggeConfig.json' with { type: 'json' }
-import type { IUser, IBotConfig, ILog } from './types.ts'
+import type { IUser, IBotConfig, ILog, IUserEvents } from './types.ts'
 
 const workingPath = join(tmpdir(), 'ggeBot')
 const configPath = join(workingPath, "ggeConfig.json")
@@ -50,14 +50,14 @@ try { await pg.initialise(); databaseInitialised = true } catch (e) { console.de
 await pg.start()
 
 export const client = await pg.getPgClient().connect()
-const subUserEvents = new EventEmitter()
+const userEvents = new EventEmitter<IUserEvents>()
 interface ActiveUser { logSubuserID?: number, ws: WebSocket }
 const activeUsers: { [key: string]: IterableWeakMap<WebSocket, ActiveUser> | undefined } = {}
 
 if (databaseInitialised)
     await client.query(await readFile('./init.sql').then(o => o.toString()))
 await client.query(`LISTEN sub_user_update; LISTEN history_update; LISTEN sub_user_delete`)
-client.addListener('notification', ({ channel, payload }: any) => subUserEvents.emit(channel, payload))
+client.on('notification', ({ channel, payload }: any) => userEvents.emit(channel, payload))
 
 const startBot = async (id: number, owneruuid: string) => {
     try {
@@ -86,7 +86,7 @@ const startBot = async (id: number, owneruuid: string) => {
     new Worker('./bot.ts', { workerData: { id, owneruuid, url: config.url.toString(), workingPath } satisfies IBotConfig })
 }
 
-subUserEvents.addListener('history_update', payload => {
+userEvents.on('history_update', payload => {
     const [id, log] = JSON.parse(payload) as [number, Partial<ILog>]
     const activeUser = activeUsers[log.owneruuid!]
 
@@ -96,7 +96,7 @@ subUserEvents.addListener('history_update', payload => {
     activeUser?.forEach(({ ws, logSubuserID }) =>
         id == logSubuserID && ws.send(JSON.stringify([UserAction.log, log])))
 })
-subUserEvents.addListener('sub_user_update', payload => {
+userEvents.on('sub_user_update', payload => {
     const [oldUser, newUser] = JSON.parse(payload) as [IUser & { [key : string] : any}, IUser & { [key : string] : any}]
     const userChanges = (oldUser ? Object.entries(oldUser).reduce((obj: any, [key, value]) =>
         (newUser[key] != value && (obj[key] = newUser[key]), obj), {}) : newUser) as Partial<IUser>
@@ -109,7 +109,7 @@ subUserEvents.addListener('sub_user_update', payload => {
     Array.from(activeUsers[newUser.owneruuid]?.keys() ?? []).forEach(ws =>
         ws.send(JSON.stringify([UserAction.change, userChanges])))
 })
-subUserEvents.addListener('sub_user_delete', payload => {
+userEvents.on('sub_user_delete', payload => {
     const [id, owneruuid] = JSON.parse(payload) as [string, string]
 
     Array.from(activeUsers[owneruuid]?.keys() ?? []).forEach(ws =>
@@ -117,7 +117,7 @@ subUserEvents.addListener('sub_user_delete', payload => {
 })
 const app = express().use('/', express.static('frontend/dist/client/')).use(ssrHandler)
 export const wss = new WebSocketServer({ noServer: true })
-wss.addListener('connection', async (ws, { headers }) => {
+wss.on('connection', async (ws, { headers }) => {
     const uuid = headers.cookie?.split('; ').find(e => e.startsWith('uuid='))?.substring(5, Infinity)
     if (!uuid || !await client.query('Select uuid from users WHERE uuid=$1', [uuid]).then((r: any) => r.rows[0]?.uuid))
         return ws.close(4000)
