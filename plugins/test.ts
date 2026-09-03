@@ -1,4 +1,6 @@
-import { events, close } from '../bot'
+import { events, close, getPluginOptions } from '../bot.ts'
+
+const options = getPluginOptions()! 
 
 events.on('load', () => {
     console.log("Well it works ig")
@@ -7,9 +9,10 @@ events.on('load', () => {
 events.on('unload', () => {
     console.log("Shutting down ig")
 })
-events.on('restartPlugin', (key) => {
+events.on('reloadPlugin', (key) => {
     console.log("We are back")
 })
 events.on('unloadPlugin', (key) => {
     console.log("We are gone")
 })
+

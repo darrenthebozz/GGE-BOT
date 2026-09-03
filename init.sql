@@ -1,3 +1,11 @@
+--You can merge the logging into the subuser class
+--You could probably use the in built login features of postgres
+--We need to get the plugins and get their type but for that we must be able to pass an array by string key
+--We can redefine the Plugin field as a json object that way we can have keyed names
+--However, why do we want this?
+--We want this because its easier to ID using keyof in typescript allowing type strictness
+--This is not an issue if we can identify the order
+
 CREATE TYPE ServerType AS ENUM ('default', 'horizon', 'outerRealm', 'outerRealm&horizon');
 CREATE TABLE sub_users (
     id SERIAL PRIMARY KEY,

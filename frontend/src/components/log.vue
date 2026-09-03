@@ -3,7 +3,7 @@ import { ref, reactive } from 'vue'
 import ws from '../js/webSocket.ts'
 import { FwbModal } from 'flowbite-vue'
 import UserAction from '../../../modules/CUserAction.ts'
-import type { ILog } from '../../../types.ts'
+import type { ILog } from '../../../types.d.ts'
 
 const { userID } : { readonly userID? : number } = defineProps(['userID']) 
 

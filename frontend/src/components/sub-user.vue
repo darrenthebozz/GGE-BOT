@@ -5,7 +5,7 @@ import UserAction from '../../../modules/CUserAction.ts'
 import webSocket from '../js/webSocket.ts'
 import Log from './log.vue'
 import type { Ref } from 'vue'
-import type { IUser } from '../../../types.ts'
+import type { IUser } from '../../../types.d.ts'
 
 const props = defineProps(['user']) as { user : Ref<IUser> }
 const user = reactive(props.user)

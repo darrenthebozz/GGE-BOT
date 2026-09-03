@@ -1,24 +1,22 @@
-process.on("uncaughtException", console.error)
-
 import './botOverrides.ts'
-
 import { readFile } from 'node:fs/promises'
-import { workerData } from "node:worker_threads"
-import { join } from "node:path"
-import { RateLimiter } from "limiter"
+import { join, normalize } from 'node:path'
+import { getCallSites } from 'node:util'
+import { RateLimiter } from 'limiter'
 import client from './modules/database.ts'
 import EventEmitter from './modules/EventEmitter.ts'
 import exampleConfig from './ggeConfig.json' with { type: 'json' }
-import type { IBotConfig, IUser, IInstance, IUserEvents } from './types.ts'
+import type { IBotConfig, IUser, IInstance, IUserEvents } from './types.d.ts'
 
+const { id, workingPath } = await import("node:worker_threads").then(e => e.workerData as IBotConfig)
 export const events = new EventEmitter<{
-    unload : string
+    unload : void
     load : void
-    restartPlugin : string
+    reloadPlugin : string
     unloadPlugin : string
 }>()
 const userEvents = new EventEmitter<IUserEvents>()
-const restart = (...str: string[]) => {
+export const restart = (...str: string[]) => {
     events.emit("unload")
     if (str.length > 0)
         console.error(...str)
@@ -30,6 +28,7 @@ export const close = (...str: string[]) => {
         console.error(...str)
     ws.close()
 }
+
 await client.query(`LISTEN sub_user_update; LISTEN sub_user_delete`)
 client.addListener('notification', ({ channel, payload }) => userEvents.emit(channel, payload))
 
@@ -48,24 +47,22 @@ userEvents.on('sub_user_delete', close)
 
 const err = await import('./err.json', { with: { type: "json" } }).then(e =>
     e.default as typeof e.default & Record<string, undefined>)
-const { id, workingPath, url } = Object.assign({ ...workerData as Omit<IBotConfig, "url"> }, { url: new URL(workerData.url) })
-
-const instances = await fetch(url.toString() + "/server").then(a => a.json()) as IInstance[]
 const configPath = join(workingPath, "ggeConfig.json")
-export var config = await readFile(configPath).then(a => a.toJSON()) as Partial<typeof exampleConfig>
+export const config = await readFile(configPath, 'utf-8').then(str => {
+    const config = Object.assign(JSON.parse(str) as Partial<typeof exampleConfig>, exampleConfig)
+    return Object.assign({ url : new URL(config.url)}, config)
+})
+const instances = await fetch(config.url.toString() + "/server").then(a => a.json()) as IInstance[]
 const { name, plugins, servertype, serverid, logintoken } =
     (await client.query('SELECT name, plugins, serverType, serverID, loginToken FROM sub_users WHERE id=$1', [id])
         .then(e => e.rows[0] as IUser))
 const { server, zone } = instances.find(instance => instance.value == serverid)!
-const ws = new WebSocket(server)
+const ws = new WebSocket(`wss://${server}`)
+export const xtHandler = new EventEmitter<{ [key : string] : any}>()
 
 ws.onopen = () => ws.send('<msg t="sys"><body action="verChk" r="0"><ver v="166"/></body></msg>')
 ws.onerror = () => close("webSocketError")
 ws.onclose = () => close("webSocketClosed")
-
-console.log("Starting Bot")
-
-export const xtHandler = new EventEmitter<{ [key : string] : any}>()
 ws.onmessage = ({ data }) => {
     let message = data.toString() as string
 
@@ -99,6 +96,7 @@ export const sendXT = (cmdName: string, paramObj: object | String) => limiter.re
 
 let maxTimeouts = 8
 let importantErrors = 0
+let loginAttempts = 0
 
 export const waitForResult = (key: string, timeout: number, func?: (data: object | string, result: string) => boolean) =>
     new Promise<{ data: object | string, result: string }>((resolve, reject) => {
@@ -145,8 +143,6 @@ export const waitForResult = (key: string, timeout: number, func?: (data: object
 
         xtHandler.addListener(key, helperFunction)
     })
-
-xtHandler.on("rlu", () => ws.send('<msg t="sys"><body action="autoJoin" r="-1"></body></msg>'))
 async function retry() {
     if (servertype != "default") {
         client.query('SELECT name, plugins, serverType, serverID, loginToken FROM sub_users WHERE id=$1', [id])
@@ -171,9 +167,8 @@ async function retry() {
     }))
 }
 
-xtHandler.on("vck", retry)
-
-let loginAttempts = 0
+xtHandler.on("rlu", () => ws.send('<msg t="sys"><body action="autoJoin" r="-1"></body></msg>'))
+// xtHandler.on("vck", retry)
 xtHandler.on("lli", async (obj, result) => {
     if (result == "LOGIN_COOLDOWN_ACTIVE") {
         console.log("retryLogin", obj.CD, "retryLoginSeconds")
@@ -208,11 +203,17 @@ xtHandler.on("lli", async (obj, result) => {
         retry()
     else close()
 })
+export function getPluginOptions<T>() {
+    const name = getCallSites(6)[2]?.scriptName
+    return plugins.find(e=> e.filePath == name)?.options
+}
+await Promise.allSettled(plugins?.map(({ state, filePath }) => 
+        state ? import(`./plugins/${normalize(filePath)}.ts`) : undefined))
 
-plugins.forEach(({ state, name }) => {
-    if (!state)
-        return
-    
-    try { import(`./${name}.ts`) }
-    catch (e) { console.error(e) }
-})
+console.log("Starting Bot")
+
+console.log(name)
+console.log(server)
+console.log(zone)
+
+events.emit("load")

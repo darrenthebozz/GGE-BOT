@@ -1,8 +1,10 @@
+process.on("uncaughtException", console.error)
+
 import { getCallSites } from "node:util"
 import { basename } from "node:path"
 import { workerData } from "node:worker_threads"
 import client from './modules/database.ts'
-import type { IBotConfig } from './types.ts'
+import type { IBotConfig } from './types.d.ts'
 
 const { id, owneruuid } = workerData as IBotConfig
 

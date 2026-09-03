@@ -7,5 +7,5 @@ interface NodeEventEmitter<T> extends Omit<EventEmitter, 'on' | 'emit' | 'off'> 
   emit<K extends keyof T>(event: K, ...arg: Array<T[K]> ): boolean;
   emit<K extends keyof T>(event: K, ...arg: Array<T[K]>): boolean;
 }
-type a<T> = T extends NodeEventEmitter<T> ? number : string
+
 export default EventEmitter as (new<T = { [key : string] : unknown }> () => NodeEventEmitter<T>)

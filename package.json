@@ -2,29 +2,21 @@
   "type": "module",
   "dependencies": {
     "bufferutil": "^4.1.0",
-    "dayjs": "^1.11.23",
-    "discord.js": "^14.27.0",
     "embedded-postgres": "^18.4.0-beta.17",
-    "emoji-dictionary": "^1.0.12",
     "express": "^5.2.1",
-    "i18n": "^0.15.3",
     "limiter": "^3.0.0",
-    "node-cache": "^5.1.2",
     "npm-check-updates": "^23.1.0",
-    "pretty-time": "^1.1.0",
     "pureimage": "^0.4.20",
     "secure-json-parse": "^4.1.0",
-    "sharp": "^0.35.4",
-    "turl": "^1.1.2",
-    "undici": "^8.10.0",
+    "undici": "^8.10.1",
     "ws": "^8.21.3",
     "xml2js": "^0.6.2"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
-    "@types/i18n": "^0.13.12",
-    "@types/node": "^26.4.0",
-    "@types/pg": "^8.23.1"
+    "@types/node": "^26.4.1",
+    "@types/pg": "^8.23.1",
+    "@types/ws": "^8.18.1"
   },
   "allowScripts": {
     "bufferutil@4.1.0": true,

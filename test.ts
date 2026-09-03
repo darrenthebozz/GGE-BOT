@@ -6,8 +6,7 @@ import CUserAction from './modules/CUserAction.ts'
 import EventEmitter from 'node:events'
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import type {ILog, IUser} from './types.ts'
-
+import type { IUser } from './types.d.ts'
 const workingPath = join(tmpdir(), 'ggeBot')
 
 await rm(workingPath, { recursive: true, force: true })

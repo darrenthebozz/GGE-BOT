@@ -10,22 +10,20 @@ export enum PluginOptionType {
     Number
 }
 export interface IPluginOption {
-    id: string
     type: PluginOptionType
     description?: string
     value?: any
     hideLabel?: boolean
 }
 export interface IPlugin {
-    name: string
+    key : string
+    filePath: string
     description: string
-    options: IPluginOption[]
-    state : boolean
+    options: {[key : string]: IPluginOption}
 }
 export interface IBotConfig {
     id: number
     owneruuid: string
-    url: string
     workingPath: string
 }
 export interface IInstance {

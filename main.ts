@@ -12,7 +12,7 @@ import IterableWeakMap from './modules/IterableWeakMap.ts'
 import UserAction from './modules/CUserAction.ts'
 import EventEmitter from './modules/EventEmitter.ts'
 import exampleConfig from './ggeConfig.json' with { type: 'json' }
-import type { IUser, IBotConfig, ILog, IUserEvents } from './types.ts'
+import type { IUser, IBotConfig, ILog, IUserEvents } from './types.d.ts'
 
 const workingPath = join(tmpdir(), 'ggeBot')
 const configPath = join(workingPath, "ggeConfig.json")
@@ -83,7 +83,7 @@ const startBot = async (id: number, owneruuid: string) => {
         FOR EACH ROW
         EXECUTE FUNCTION on_history_update_${id}();`)
     } catch (e) { console.debug(e) }
-    new Worker('./bot.ts', { workerData: { id, owneruuid, url: config.url.toString(), workingPath } satisfies IBotConfig })
+    new Worker('./bot.ts', { workerData: { id, owneruuid, workingPath } satisfies IBotConfig })
 }
 
 userEvents.on('history_update', payload => {
@@ -128,7 +128,8 @@ wss.on('connection', async (ws, { headers }) => {
     activeUsers[uuid].set(ws, activeUser)
 
     ws.send(JSON.stringify([UserAction.get, ...await client.query('Select name, plugins, state, serverType, serverID, id from sub_users WHERE owneruuid=$1', [uuid]).then((a: any) => a.rows)]))
-    ws.addEventListener("message", async ({ data }) => {
+    ws.send(JSON.stringify([UserAction.plugins, await import("./plugins/index.ts").then(e => e.default)]))
+    ws.addEventListener("message", async ({ data })  => {
         const [action, obj]: [number, any] = safeParse(data.toString())
 
         switch (action) {
