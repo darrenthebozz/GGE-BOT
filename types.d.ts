@@ -38,7 +38,12 @@ export interface IUser {
     owneruuid: string
     name: string
     logintoken: string
-    plugins: IPlugin[]
+    plugins: {
+        [key : string] : {
+            state : number
+            [key : string] : any
+        } | undefined
+    }
     state: boolean
     servertype: 'default' | 'horizon' | 'outerRealm' | 'outerRealm&horizon'
     serverid: number

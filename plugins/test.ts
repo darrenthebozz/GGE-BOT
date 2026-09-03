@@ -1,6 +1,5 @@
 import { events, close, getPluginOptions } from '../bot.ts'
-
-const options = getPluginOptions()! 
+const options = getPluginOptions()
 
 events.on('load', () => {
     console.log("Well it works ig")

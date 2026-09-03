@@ -58,6 +58,10 @@ const { name, plugins, servertype, serverid, logintoken } =
         .then(e => e.rows[0] as IUser))
 const { server, zone } = instances.find(instance => instance.value == serverid)!
 const ws = new WebSocket(`wss://${server}`)
+export const getPluginOptions = () => {
+    const plugin = plugins[getCallSites(6)[2]?.scriptName]
+    return plugin as Omit<typeof plugin, "state">
+}
 export const xtHandler = new EventEmitter<{ [key : string] : any}>()
 
 ws.onopen = () => ws.send('<msg t="sys"><body action="verChk" r="0"><ver v="166"/></body></msg>')
@@ -203,12 +207,9 @@ xtHandler.on("lli", async (obj, result) => {
         retry()
     else close()
 })
-export function getPluginOptions<T>() {
-    const name = getCallSites(6)[2]?.scriptName
-    return plugins.find(e=> e.filePath == name)?.options
-}
-await Promise.allSettled(plugins?.map(({ state, filePath }) => 
-        state ? import(`./plugins/${normalize(filePath)}.ts`) : undefined))
+
+// await Promise.allSettled(plugins?.map(({ state, filePath }) => 
+//         state ? import(`./plugins/${normalize(filePath)}.ts`) : undefined))
 
 console.log("Starting Bot")
 
