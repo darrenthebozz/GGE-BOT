@@ -1,6 +1,6 @@
 import './botOverrides.ts'
 import { readFile } from 'node:fs/promises'
-import { join, normalize } from 'node:path'
+import { join } from 'node:path'
 import { getCallSites } from 'node:util'
 import { RateLimiter } from 'limiter'
 import client from './modules/database.ts'
@@ -20,13 +20,15 @@ export const restart = (...str: string[]) => {
     events.emit("unload")
     if (str.length > 0)
         console.error(...str)
-    process.exit(0)
+    ws.close()
+    client.end()
 }
 export const close = (...str: string[]) => {
     events.emit("unload")
     if (str.length > 0)
         console.error(...str)
     ws.close()
+    client.end()
 }
 
 await client.query(`LISTEN sub_user_update; LISTEN sub_user_delete`)

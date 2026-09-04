@@ -1,17 +1,5 @@
 import { events, close, getPluginOptions } from '../bot.ts'
-import type { IPlugin } from "../types.ts"
-export const Test = {
-    key : "test",
-    description: "",
-    options: {
-        numberr: {
-            type: "Number"
-        },
-        string: {
-            type: "Toggle"
-        }
-    }
-} satisfies IPlugin
+import type { Test } from "./index.ts"
 
 const options = getPluginOptions<typeof Test>()
 options.numberr

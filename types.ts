@@ -18,6 +18,7 @@ export interface IPluginOption {
 }
 export interface IPlugin {
     key : string
+    filePath : string
     description: string
     options: {[key : string]: IPluginOption | undefined}
 }
