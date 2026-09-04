@@ -5,21 +5,21 @@ export interface ILog {
     loglevel : 'INFO' | 'WARNING' | 'ERROR' | 'DEBUG'
     owneruuid : string
 }
-export enum PluginOptionType {
-    Toggle,
-    Number
+
+export interface IPluginOptionType {
+    Number : number
+    Toggle: boolean
 }
 export interface IPluginOption {
-    type: PluginOptionType
+    type: keyof IPluginOptionType
     description?: string
     value?: any
     hideLabel?: boolean
 }
 export interface IPlugin {
     key : string
-    filePath: string
     description: string
-    options: {[key : string]: IPluginOption}
+    options: {[key : string]: IPluginOption | undefined}
 }
 export interface IBotConfig {
     id: number

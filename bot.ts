@@ -6,7 +6,7 @@ import { RateLimiter } from 'limiter'
 import client from './modules/database.ts'
 import EventEmitter from './modules/EventEmitter.ts'
 import exampleConfig from './ggeConfig.json' with { type: 'json' }
-import type { IBotConfig, IUser, IInstance, IUserEvents } from './types.d.ts'
+import type { IBotConfig, IUser, IInstance, IUserEvents, IPlugin, IPluginOptionType } from './types.ts'
 
 const { id, workingPath } = await import("node:worker_threads").then(e => e.workerData as IBotConfig)
 export const events = new EventEmitter<{
@@ -58,10 +58,18 @@ const { name, plugins, servertype, serverid, logintoken } =
         .then(e => e.rows[0] as IUser))
 const { server, zone } = instances.find(instance => instance.value == serverid)!
 const ws = new WebSocket(`wss://${server}`)
-export const getPluginOptions = () => {
-    const plugin = plugins[getCallSites(6)[2]?.scriptName]
-    return plugin as Omit<typeof plugin, "state">
+
+export function getPluginOptions<T extends IPlugin>() {
+    type TOptions = NonNullable<T['options']>
+    type OptionsFlags = {
+        [Property in keyof TOptions]: 
+            IPluginOptionType[NonNullable<TOptions[Property]>['type']];
+    };
+
+    const plugin = plugins[getCallSites(6)[2]?.scriptName]!
+    return plugin as Omit<typeof plugin, "state"> as OptionsFlags
 }
+
 export const xtHandler = new EventEmitter<{ [key : string] : any}>()
 
 ws.onopen = () => ws.send('<msg t="sys"><body action="verChk" r="0"><ver v="166"/></body></msg>')

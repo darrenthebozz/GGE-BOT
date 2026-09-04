@@ -1,5 +1,20 @@
 import { events, close, getPluginOptions } from '../bot.ts'
-const options = getPluginOptions()
+import type { IPlugin } from "../types.ts"
+export const Test = {
+    key : "test",
+    description: "",
+    options: {
+        numberr: {
+            type: "Number"
+        },
+        string: {
+            type: "Toggle"
+        }
+    }
+} satisfies IPlugin
+
+const options = getPluginOptions<typeof Test>()
+options.numberr
 
 events.on('load', () => {
     console.log("Well it works ig")
