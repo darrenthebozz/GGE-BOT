@@ -1,4 +1,4 @@
-import { IPlugin } from "../types"
+import type { IPlugin } from "../types.ts"
 
 export const Test = {
     key : "test",

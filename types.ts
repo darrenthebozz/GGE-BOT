@@ -41,7 +41,7 @@ export interface IUser {
     logintoken: string
     plugins: {
         [key : string] : {
-            state : number
+            state : boolean
             [key : string] : any
         } | undefined
     }

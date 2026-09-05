@@ -1,11 +1,12 @@
 import './botOverrides.ts'
 import { readFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { join, normalize } from 'node:path'
 import { getCallSites } from 'node:util'
 import { RateLimiter } from 'limiter'
 import client from './modules/database.ts'
 import EventEmitter from './modules/EventEmitter.ts'
 import exampleConfig from './ggeConfig.json' with { type: 'json' }
+import pluginConfig from './plugins/index.ts'
 import type { IBotConfig, IUser, IInstance, IUserEvents, IPlugin, IPluginOptionType } from './types.ts'
 
 const { id, workingPath } = await import("node:worker_threads").then(e => e.workerData as IBotConfig)
@@ -23,12 +24,11 @@ export const restart = (...str: string[]) => {
     ws.close()
     client.end()
 }
-export const close = (...str: string[]) => {
+export const close = async (...str: string[]) => {
     events.emit("unload")
     if (str.length > 0)
         console.error(...str)
     ws.close()
-    client.end()
 }
 
 await client.query(`LISTEN sub_user_update; LISTEN sub_user_delete`)
@@ -43,6 +43,8 @@ userEvents.on('sub_user_update', payload => {
     if (userChanges.plugins) {
         debugger
     }
+    if(userChanges.state == false)
+        close()
 
 })
 userEvents.on('sub_user_delete', close)
@@ -76,7 +78,10 @@ export const xtHandler = new EventEmitter<{ [key : string] : any}>()
 
 ws.onopen = () => ws.send('<msg t="sys"><body action="verChk" r="0"><ver v="166"/></body></msg>')
 ws.onerror = () => close("webSocketError")
-ws.onclose = () => close("webSocketClosed")
+ws.onclose = async () => {
+    await client.query('UPDATE sub_users SET state=$2 WHERE id=$1', [id, false])
+    await client.end()
+}
 ws.onmessage = ({ data }) => {
     let message = data.toString() as string
 
@@ -218,13 +223,21 @@ xtHandler.on("lli", async (obj, result) => {
     else close()
 })
 
-// await Promise.allSettled(plugins?.map(({ state, filePath }) => 
-//         state ? import(`./plugins/${normalize(filePath)}.ts`) : undefined))
+Promise.allSettled(Array.from(Object.entries(plugins)).map(([key, object]) => {
+    if(!object?.state)
+        return
 
-console.log("Starting Bot")
+    const pluginData = pluginConfig.find(e => e.key == key)
 
-console.log(name)
-console.log(server)
-console.log(zone)
+    if(!pluginData)
+        return console.warn(key, " missing") 
+    
+    return import(`./plugins/${normalize(pluginData.filePath)}`)
+})).then(() => {
+    console.log("Starting Bot")
+    console.log(name)
+    console.log(server)
+    console.log(zone)
 
-events.emit("load")
+    events.emit("load")
+})
