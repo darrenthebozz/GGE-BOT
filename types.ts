@@ -1,9 +1,8 @@
+export type TLogLevel = 'INFO' | 'WARNING' | 'ERROR' | 'DEBUG'
 export interface ILog {
-    sequence : number
     timestamp : string
     data : string[]
-    loglevel : 'INFO' | 'WARNING' | 'ERROR' | 'DEBUG'
-    owneruuid : string
+    loglevel : TLogLevel
 }
 
 export interface IPluginOptionType {

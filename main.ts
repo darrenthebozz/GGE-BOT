@@ -22,9 +22,7 @@ try {
     var config = Object.assign(userConfig, { url : new URL(userConfig.url) })
 }
 catch(e) {
-    try {
-        await writeFile(configPath, JSON.stringify(exampleConfig))
-    }
+    try { await writeFile(configPath, JSON.stringify(exampleConfig)) }
     catch(e) {
         console.error("Could not create a config at workingPath.\n", e)
         process.exit(1)
@@ -59,42 +57,14 @@ if (databaseInitialised)
 await client.query(`LISTEN sub_user_update; LISTEN history_update; LISTEN sub_user_delete`)
 client.on('notification', ({ channel, payload }: any) => userEvents.emit(channel, payload))
 
-const startBot = async (id: number, owneruuid: string) => {
-    try {
-        await client.query(`
-        CREATE SEQUENCE IF NOT EXISTS history_sequence_${id} MINVALUE 0 MAXVALUE 127 CYCLE;
-        
-        CREATE TABLE IF NOT EXISTS history_${id} (
-        sequence  INTEGER PRIMARY key,
-        timestamp TIMESTAMP NOT NULL DEFAULT now(),
-        data      TEXT[] NOT NULL,
-        logLevel  VerbosityLevel NOT NULL,
-        owneruuid TEXT NOT NULL);
-        
-        CREATE OR REPLACE FUNCTION on_history_update_${id}()
-        RETURNS TRIGGER AS $$
-        BEGIN
-        PERFORM pg_notify('history_update', '[' || '${id},' || row_to_json(NEW.*)::TEXT || ']');
-        RETURN NEW;
-        END $$ LANGUAGE PLPGSQL;
-
-        CREATE OR REPLACE TRIGGER history_${id}
-        AFTER INSERT OR UPDATE ON history_${id}
-        FOR EACH ROW
-        EXECUTE FUNCTION on_history_update_${id}();`)
-    } catch (e) { console.debug(e) }
+const startBot = (id: number, owneruuid: string) => 
     new Worker('./bot.ts', { workerData: { id, owneruuid, workingPath } satisfies IBotConfig })
-}
 
 userEvents.on('history_update', payload => {
-    const [id, log] = JSON.parse(payload) as [number, Partial<ILog>]
-    const activeUser = activeUsers[log.owneruuid!]
+    const { id, owneruuid, data, loglevel, timestamp } = JSON.parse(payload) as ILog & { id : number, owneruuid : string }
 
-    delete log.owneruuid
-    delete log.sequence
-
-    activeUser?.forEach(({ ws, logSubuserID }) =>
-        id == logSubuserID && ws.send(JSON.stringify([UserAction.log, log])))
+    activeUsers[owneruuid]?.forEach(({ ws, logSubuserID }) =>
+        id == logSubuserID && ws.send(JSON.stringify([UserAction.log, { timestamp, data, loglevel }])))
 })
 userEvents.on('sub_user_update', payload => {
     const [oldUser, newUser] = JSON.parse(payload) as [IUser & { [key : string] : any}, IUser & { [key : string] : any}]
@@ -134,12 +104,12 @@ wss.on('connection', async (ws, { headers }) => {
 
         switch (action) {
             case UserAction.add:
-                await client.query('INSERT INTO sub_users(name, loginToken, plugins, serverType, serverID, owneruuid) VALUES($2,$3,$4,$5,$6,$1)',
+                client.query('INSERT INTO sub_users(name, loginToken, plugins, serverType, serverID, owneruuid) VALUES($2,$3,$4,$5,$6,$1)',
                     [uuid, ...Object.values(obj)])
                 break
             case UserAction.change:
                 let i = 3
-                await client.query("UPDATE sub_users SET " + (
+                client.query("UPDATE sub_users SET " + (
                     (obj.name ? `name=$${i++},` : '') +
                     (obj.loginToken ? `loginToken=$${i++},` : '') +
                     (obj.plugins ? `plugins=$${i++},` : '') +
@@ -149,17 +119,12 @@ wss.on('connection', async (ws, { headers }) => {
                 ).replace(/\,$/, '') + " WHERE owneruuid=$1 AND id=$2", [uuid, ...Object.values(obj)])
                 break
             case UserAction.delete:
-                await client.query('DELETE FROM sub_users WHERE owneruuid=$1 AND id=$2', [uuid, obj])
+                client.query('DELETE FROM sub_users WHERE owneruuid=$1 AND id=$2', [uuid, obj])
                 break
             case UserAction.log:
-                activeUser.logSubuserID = Number(obj)
-                if (isNaN(activeUser.logSubuserID))
-                    break
-                try {
+                if (activeUser.logSubuserID = Number(obj))
                     ws.send(JSON.stringify([UserAction.log,
-                    ...(await client.query(`SELECT timestamp, data, logLevel from history_${activeUser.logSubuserID} WHERE owneruuid=$1`, [uuid]).then(e => e.rows))]))
-                }
-                catch (e) { console.debug(e) }
+                    ...(await client.query('SELECT logs from sub_users WHERE owneruuid=$1 AND id=$2', [uuid, activeUser.logSubuserID]).then(e => e.rows?.[0]?.logs))]))
                 break
         }
     })

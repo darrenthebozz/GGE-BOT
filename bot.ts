@@ -41,7 +41,7 @@ userEvents.on('sub_user_update', payload => {
 
     userChanges.id = newUser.id
     if (userChanges.plugins) {
-        debugger
+        // debugger
     }
     if(userChanges.state == false)
         close()

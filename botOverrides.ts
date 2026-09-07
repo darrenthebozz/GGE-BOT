@@ -11,9 +11,8 @@ const { id, owneruuid } = workerData as IBotConfig
 function mngLog(logLevel: "INFO" | "WARNING" | "ERROR" | "DEBUG", ...msg: Array<any>) {
     const fileName = basename(getCallSites(6)[2]?.scriptName).slice(0, -3)
     const message = ['[', fileName, '] ', ...(msg.map(m => m instanceof Error ? m.message : String(m)))]
-
-    client.query(`INSERT INTO history_${id} (sequence, timestamp, data, logLevel, owneruuid) VALUES (nextval('history_sequence_${id}'), default, $1, $2, $3) 
-                 ON CONFLICT (sequence) DO UPDATE SET timestamp = now(), data = $1, logLevel = $2;`, [message, logLevel, owneruuid])
+    
+    client.query('SELECT add_log($1,$2,$3,$4)', [owneruuid, id, message, logLevel])
 }
 
 console.log = console.info = (...msg) => mngLog("INFO", msg)

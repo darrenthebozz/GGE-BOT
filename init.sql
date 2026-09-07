@@ -6,30 +6,57 @@
 --We want this because its easier to ID using keyof in typescript allowing type strictness
 --This is not an issue if we can identify the order
 
+CREATE TYPE VerbosityLevel AS ENUM ('INFO', 'WARNING', 'ERROR', 'DEBUG');
 CREATE TYPE ServerType AS ENUM ('default', 'horizon', 'outerRealm', 'outerRealm&horizon');
+CREATE TYPE SubUserLog AS (
+    timestamp TIMESTAMP,
+    data      TEXT[],
+    loglevel  VerbosityLevel
+);
 CREATE TABLE sub_users (
     id SERIAL PRIMARY KEY,
-    ownerUUID TEXT NOT NULL,
+    owneruuid TEXT NOT NULL,
     name TEXT NOT NULL,
-    loginToken TEXT NOT NULL,
+    logintoken TEXT NOT NULL,
     plugins JSON,
     state BOOLEAN DEFAULT FALSE,
-    serverType ServerType,
-    serverID INTEGER NOT NULL
+    servertype ServerType,
+    serverid INTEGER NOT NULL,
+    logs SubUserLog[]
 );
 
+CREATE FUNCTION add_log(owner_uuid TEXT, cur_id INT, data TEXT[], loglevel VerbosityLevel)
+RETURNS VOID AS $$
+DECLARE
+    cur_log SubUserLog;
+    target_row sub_users;
+BEGIN
+    cur_log := row(now(), data, loglevel)::SubUserLog;
+
+    SELECT * INTO target_row FROM sub_users WHERE id = cur_id;
+    
+    IF cardinality(target_row.logs) >= 256 THEN
+        target_row.logs := target_row.logs[2:]; 
+    END IF;
+
+    target_row.logs := array_append(target_row.logs, cur_log);
+
+    UPDATE sub_users SET logs = target_row.logs WHERE id = cur_id;
+    PERFORM pg_notify('history_update', (
+        jsonb_build_object('id', cur_id, 'owneruuid', owner_uuid) || to_jsonb(cur_log)
+    )::TEXT);
+    RETURN;
+END $$ LANGUAGE PLPGSQL;
 CREATE FUNCTION on_sub_user_update()
 RETURNS TRIGGER AS $$
 BEGIN
    PERFORM pg_notify('sub_user_update',array_to_json(ARRAY[OLD.*,NEW.*])::TEXT);
    RETURN NEW;
 END $$ LANGUAGE PLPGSQL;
-
 CREATE FUNCTION on_sub_user_delete()
 RETURNS TRIGGER AS $$
 BEGIN
    PERFORM pg_notify('sub_user_delete', '[' || OLD.id::TEXT || ',"' || OLD.owneruuid || '"]');
-   EXECUTE 'DROP TABLE IF EXISTS ' || quote_ident('log_history_' || OLD.id::text);
    RETURN NEW;
 END $$ LANGUAGE PLPGSQL;
 
@@ -67,6 +94,3 @@ CREATE TRIGGER hash_password
 BEFORE INSERT OR UPDATE ON users
 FOR EACH ROW
 EXECUTE FUNCTION hash_user_password();
-
----history
-CREATE TYPE VerbosityLevel AS ENUM ('INFO', 'WARNING', 'ERROR', 'DEBUG');
