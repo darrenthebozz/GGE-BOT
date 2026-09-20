@@ -5,9 +5,9 @@ export const Test = {
     filePath : "./test.ts",
     description: "",
     options: {
-        numberr: { type: "Number" },
+        numberr: { type: "Number", default : 2 },
         string: { type: "Toggle" }
     }
 } as const satisfies IPlugin
 
-export default [Test]
+export default [Test] as IPlugin[]

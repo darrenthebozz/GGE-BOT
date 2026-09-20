@@ -7,7 +7,7 @@ import client from './modules/database.ts'
 import EventEmitter from './modules/EventEmitter.ts'
 import exampleConfig from './ggeConfig.json' with { type: 'json' }
 import pluginConfig from './plugins/index.ts'
-import type { IBotConfig, IUser, IInstance, IUserEvents, IPlugin, IPluginOptionType } from './types.ts'
+import type { IBotConfig, IUser, IInstance, IUserEvents, IPlugin, IPluginOptionValueType } from './types.ts'
 
 const { id, workingPath } = await import("node:worker_threads").then(e => e.workerData as IBotConfig)
 export const events = new EventEmitter<{
@@ -64,14 +64,9 @@ const { server, zone } = instances.find(instance => instance.value == serverid)!
 const ws = new WebSocket(`wss://${server}`)
 
 export function getPluginOptions<T extends IPlugin>() {
-    type TOptions = NonNullable<T['options']>
-    type OptionsFlags = {
-        [Property in keyof TOptions]: 
-            IPluginOptionType[NonNullable<TOptions[Property]>['type']];
-    };
 
     const plugin = plugins[getCallSites(6)[2]?.scriptName]!
-    return plugin as Omit<typeof plugin, "state"> as OptionsFlags
+    return plugin as Omit<typeof plugin, "state"> as IPluginOptionValueType<T>
 }
 
 export const xtHandler = new EventEmitter<{ [key : string] : any}>()
@@ -162,7 +157,7 @@ export const waitForResult = (key: string, timeout: number, func?: (data: object
 
         xtHandler.addListener(key, helperFunction)
     })
-async function retry() {
+function retry() {
     if (servertype != "default") {
         client.query('SELECT name, plugins, serverType, serverID, loginToken FROM sub_users WHERE id=$1', [id])
 
@@ -187,19 +182,17 @@ async function retry() {
 }
 
 xtHandler.on("rlu", () => ws.send('<msg t="sys"><body action="autoJoin" r="-1"></body></msg>'))
-// xtHandler.on("vck", retry)
+xtHandler.on("vck", retry)
 xtHandler.on("lli", async (obj, result) => {
     if (result == "LOGIN_COOLDOWN_ACTIVE") {
         console.log("retryLogin", obj.CD, "retryLoginSeconds")
-        setTimeout(retry, obj.CD * 1000)
-        return
+        return setTimeout(retry, obj.CD * 1000)
     }
 
     if (result == "IS_BANNED") {
         console.log("retryLogin", obj.CD, "retryLoginSeconds")
         console.log("retryLogin", (obj.RS / 60 / 60).toFixed(2), "retryLoginHours")
-        setTimeout(retry, obj.RS * 1000)
-        return
+        return setTimeout(retry, obj.RS * 1000)
     }
 
     if (result == "ALL_OK") {
@@ -214,8 +207,7 @@ xtHandler.on("lli", async (obj, result) => {
             setTimeout(events.emit, 4500, "load")
             clearTimeout(timer)
         })
-        setInterval(sendXT, 1000 * 60, "pin", "<RoundHouseKick>").unref()
-        return
+        return setInterval(sendXT, 1000 * 60, "pin", "<RoundHouseKick>").unref()
     }
 
     if (result == "INVALID_LOGIN_TOKEN" && loginAttempts++ < 30)

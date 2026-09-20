@@ -51,14 +51,12 @@ export const client = await pg.getPgClient().connect()
 const userEvents = new EventEmitter<IUserEvents>()
 interface ActiveUser { logSubuserID?: number, ws: WebSocket }
 const activeUsers: { [key: string]: IterableWeakMap<WebSocket, ActiveUser> | undefined } = {}
+const startBot = (id: number, owneruuid: string) => new Worker('./bot.ts', { workerData: { id, owneruuid, workingPath } satisfies IBotConfig })
 
 if (databaseInitialised)
     await client.query(await readFile('./init.sql').then(o => o.toString()))
 await client.query(`LISTEN sub_user_update; LISTEN history_update; LISTEN sub_user_delete`)
 client.on('notification', ({ channel, payload }: any) => userEvents.emit(channel, payload))
-
-const startBot = (id: number, owneruuid: string) => 
-    new Worker('./bot.ts', { workerData: { id, owneruuid, workingPath } satisfies IBotConfig })
 
 userEvents.on('history_update', payload => {
     const { id, owneruuid, data, loglevel, timestamp } = JSON.parse(payload) as ILog & { id : number, owneruuid : string }
@@ -124,7 +122,7 @@ wss.on('connection', async (ws, { headers }) => {
             case UserAction.log:
                 if (activeUser.logSubuserID = Number(obj))
                     ws.send(JSON.stringify([UserAction.log,
-                    ...(await client.query('SELECT logs from sub_users WHERE owneruuid=$1 AND id=$2', [uuid, activeUser.logSubuserID]).then(e => e.rows?.[0]?.logs))]))
+                    ...(await client.query('SELECT json_agg(logs) AS logs FROM sub_users WHERE owneruuid=$1 AND id=$2', [uuid, activeUser.logSubuserID]).then(e => e.rows?.[0]?.logs ?? []))]))
                 break
         }
     })
@@ -132,5 +130,7 @@ wss.on('connection', async (ws, { headers }) => {
 http.createServer({}, app).listen(config.url.port).on('upgrade', (req, socket, head) => wss.handleUpgrade(req, socket, head, socket =>
     wss.emit('connection', socket, req)))
 
-await client.query('Select id, state, owneruuid from sub_users').then((r: any) => r.rows.forEach(({ id, state, owneruuid }: { id: number, state: boolean, owneruuid: string }) =>
+client.query('Select id, state, owneruuid from sub_users').then((r: any) => r.rows.forEach(({ id, state, owneruuid }: { id: number, state: boolean, owneruuid: string }) =>
     state ? startBot(id, owneruuid) : undefined))
+
+console.log("Started.")

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
 import {
     FwbAccordion,
     FwbAccordionContent,
@@ -9,55 +8,17 @@ import {
     FwbTooltip,
     FwbInput
 } from 'flowbite-vue'
+import plugins from '../../../plugins/index.ts'
+import { IUser, IPlugin } from '../../../types.ts'
 
-enum PluginOptionType {
-    Toggle,
-    Number
-}
+const { user } = defineProps<{ user : IUser }>()
 
-class PluginOption {
-    id: string
-    type: PluginOptionType
-    description?: string
-    value?: any
-    hideLabel?: boolean
-
-    constructor(o: any) {
-        this.id = o.id
-        this.type = o.type
-        this.description = o.description
-        this.hideLabel = o.hideLabel
-        this.value = o.value
+plugins.forEach((plugin) => {
+    user.plugins[plugin.key] ??= {
+        state : false
     }
-}
-
-class Plugin {
-    name: string
-    description: string
-    options: PluginOption[]
-    state : boolean
-    constructor(o: any) {
-        this.name = o.name
-        this.description = o.description
-        this.options = o.options
-        this.state = o.state
-    }
-}
-
-const plugins = ref([new Plugin({
-    name: "Attack Barrons (Empire)",
-    description: "blahblahblahblah",
-    options: [new PluginOption({
-        id: "fuckingOptionIdk",
-        type: PluginOptionType.Toggle,
-        description: "Hello world",
-    })],
-    state : false
-})])
-
-plugins.value.forEach((plugin) =>  {
-    watch(plugin, option => {
-    console.log(plugin)
+    Object.entries(plugin.options).forEach(([key, val]) => {
+        user.plugins[plugin.key]![key] ??= val.default
     })
 })
 
@@ -65,20 +26,20 @@ plugins.value.forEach((plugin) =>  {
 <template>
     <div
         class="flex flex-col max-h-96 overflow-y-auto scrollbar-color scrollbar-thumb-[#2D2E36] scrollbar-track-[#05040C] scrollbar-thin">
-        <fwb-accordion collapsed flushed v-for="({ name, description, options, state }, index) in plugins">
+        <fwb-accordion collapsed flushed v-for="{ key, description, options } in plugins as IPlugin[]">
             <fwb-accordion-panel>
                 <fwb-accordion-header class="p-2">
                     <div class="whitespace-nowrap w-full flex flex-row">
-                        <div class="m-auto ml-0">{{ name }}</div>
-                        <div class="m-auto mr-0 pt-2"><fwb-toggle v-model="plugins[index].state" color="green" /></div>
+                        <div class="m-auto ml-0">{{ key }}</div>
+                        <div class="m-auto mr-0 pt-2"><fwb-toggle v-model="user.plugins[key]!.state" color="green" /></div>
                     </div>
                 </fwb-accordion-header>
                 <fwb-accordion-content class="bg-transparent p-0">
                     <div class="bg-[#171718] p-2">{{ description }}</div>
-                    <div v-for="({ type, description, id }, index) in options" :key="id" class="flex flex-row m-2">
-                        <fwb-toggle v-model="options[index].value" :label="id" v-if="type == PluginOptionType.Toggle" />
-                        <fwb-input v-model="options[index].value" :label="id" type="number"
-                            v-if="type == PluginOptionType.Number" />
+                    <div v-for="[key2, { type, description }] in Object.entries(options)" :key="key2" class="flex flex-row m-2">
+                        <fwb-toggle v-model="user.plugins[key]![key2]" :label="key2" v-if="type == 'Toggle'" />
+                        <fwb-input v-model="options[key][key2].value" :label="key" type="number"
+                            v-if="type == 'Number'" />
                         <fwb-tooltip>
                             <template #trigger>
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"

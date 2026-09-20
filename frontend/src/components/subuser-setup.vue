@@ -12,6 +12,7 @@ import PluginView from './plugin-view.vue'
 import ws from '../js/webSocket.ts'
 import UserAction from '../../../modules/CUserAction.ts'
 import { FwbButton, FwbModal } from 'flowbite-vue'
+import { IUser } from '../../../types.ts'
 
 const isShowModal = ref(false)
 const closeModal = () => isShowModal.value = false
@@ -63,6 +64,17 @@ const closePage = () => {
     }]))
 }
 const totalPages = 3
+const user = {
+    id: NaN,
+    owneruuid: "",
+    name: "",
+    logintoken: "",
+    plugins: {
+    },
+    state: false,
+    servertype: 'default',
+    serverid: NaN
+} satisfies IUser
 </script>
 <template>
     <div class="w-full flex flex-row-reverse">
@@ -112,7 +124,7 @@ const totalPages = 3
                 </fwb-alert>
             </div>
             <div class="flex flex-col border-b border-default pb-4 md:pb-5 text-left" v-show="currentPage == 2">
-                <PluginView />
+                <PluginView :user="user" />
             </div>
             <fwb-pagination v-model="currentPage" :layout="'navigation'" :total-pages="totalPages" large class="mt-4">
                 <template #prev-button hidden />

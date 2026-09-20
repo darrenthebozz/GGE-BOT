@@ -5,21 +5,29 @@ export interface ILog {
     loglevel : TLogLevel
 }
 
+type TOptions<T extends { [key : string] : any }> = NonNullable<T['options']>
+export type IPluginOptionValueType<T extends { options?: Record<string, { type: keyof IPluginOptionType }> }> = {
+    [Property in keyof TOptions<T>]:
+    IPluginOptionType[NonNullable<TOptions<T>[Property]>['type']]
+};
+
 export interface IPluginOptionType {
     Number : number
     Toggle: boolean
 }
-export interface IPluginOption {
-    type: keyof IPluginOptionType
-    description?: string
-    value?: any
-    hideLabel?: boolean
-}
+export type IPluginOption = {
+    [K in keyof IPluginOptionType]: {
+        readonly type: K;
+        readonly description?: string;
+        readonly hideLabel?: boolean;
+        readonly default?: IPluginOptionType[K];
+    }
+}[keyof IPluginOptionType];
 export interface IPlugin {
-    key : string
-    filePath : string
-    description: string
-    options: {[key : string]: IPluginOption | undefined}
+    readonly key : string
+    readonly filePath : string
+    readonly description: string
+    readonly options: { readonly [key : string]: IPluginOption }
 }
 export interface IBotConfig {
     id: number
@@ -39,10 +47,9 @@ export interface IUser {
     name: string
     logintoken: string
     plugins: {
-        [key : string] : {
-            state : boolean
+        [key : string] : ({
             [key : string] : any
-        } | undefined
+        } & { state : boolean }) | undefined
     }
     state: boolean
     servertype: 'default' | 'horizon' | 'outerRealm' | 'outerRealm&horizon'

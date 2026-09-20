@@ -48,18 +48,6 @@ const validateUser = () => new Promise((resolve, reject) => {
     })
     loginEvents.addEventListener("LOGGEDIN", ({ detail } : any) => resolve(loginToken = detail))
 })
-const closePage = () => {
-    currentPage.value = 1
-    closeModal()
-
-    ws.send(JSON.stringify([UserAction.add, {
-        name : name.value,
-        loginToken,
-        plugins: {},
-        serverType: 'default',
-        server : server.value
-    }]))
-}
 
 </script>
 <template>
@@ -76,7 +64,7 @@ const closePage = () => {
     <fwb-modal @close="closeModal" v-show="isShowModal" header-class="bg-neutral-primary-soft"
         bodyClass="bg-neutral-primary-soft text-white text-right" size="5xl" wrapper-class="max-w-svw md:m-4 m-0">
         <template #body>
-            <PluginView />
+            <PluginView user=""/>
         </template>
     </fwb-modal>
 </template>

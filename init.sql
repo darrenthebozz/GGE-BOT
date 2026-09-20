@@ -1,11 +1,3 @@
---You can merge the logging into the subuser class
---You could probably use the in built login features of postgres
---We need to get the plugins and get their type but for that we must be able to pass an array by string key
---We can redefine the Plugin field as a json object that way we can have keyed names
---However, why do we want this?
---We want this because its easier to ID using keyof in typescript allowing type strictness
---This is not an issue if we can identify the order
-
 CREATE TYPE VerbosityLevel AS ENUM ('INFO', 'WARNING', 'ERROR', 'DEBUG');
 CREATE TYPE ServerType AS ENUM ('default', 'horizon', 'outerRealm', 'outerRealm&horizon');
 CREATE TYPE SubUserLog AS (
@@ -22,35 +14,56 @@ CREATE TABLE sub_users (
     state BOOLEAN DEFAULT FALSE,
     servertype ServerType,
     serverid INTEGER NOT NULL,
+--  FOR YOUR LIFE DONT EVEN TRY AND USE DEFAULT WTF 
     logs SubUserLog[]
 );
 
 CREATE FUNCTION add_log(owner_uuid TEXT, cur_id INT, data TEXT[], loglevel VerbosityLevel)
 RETURNS VOID AS $$
 DECLARE
-    cur_log SubUserLog;
-    target_row sub_users;
+    v_logs SubUserLog[];
+    v_timestamp TEXT := now();
 BEGIN
-    cur_log := row(now(), data, loglevel)::SubUserLog;
-
-    SELECT * INTO target_row FROM sub_users WHERE id = cur_id;
+    SELECT logs INTO v_logs FROM sub_users WHERE id = cur_id;
     
-    IF cardinality(target_row.logs) >= 256 THEN
-        target_row.logs := target_row.logs[2:]; 
+    IF cardinality(v_logs) >= 256 THEN
+        v_logs := v_logs[2:array_upper(v_logs, 1)]; 
     END IF;
 
-    target_row.logs := array_append(target_row.logs, cur_log);
+    v_logs := array_append(v_logs, row(v_timestamp,data,loglevel)::SubUserLog);
 
-    UPDATE sub_users SET logs = target_row.logs WHERE id = cur_id;
-    PERFORM pg_notify('history_update', (
-        jsonb_build_object('id', cur_id, 'owneruuid', owner_uuid) || to_jsonb(cur_log)
+    UPDATE sub_users SET logs = v_logs WHERE id = cur_id;
+    PERFORM pg_notify('history_update', jsonb_build_object(
+        'id', cur_id, 
+        'owneruuid', owner_uuid,
+        'timestamp', v_timestamp,
+        'data', data,
+        'loglevel', loglevel
     )::TEXT);
     RETURN;
 END $$ LANGUAGE PLPGSQL;
 CREATE FUNCTION on_sub_user_update()
 RETURNS TRIGGER AS $$
 BEGIN
-   PERFORM pg_notify('sub_user_update',array_to_json(ARRAY[OLD.*,NEW.*])::TEXT);
+    PERFORM pg_notify('sub_user_update', jsonb_build_array(
+        jsonb_build_object(
+            'id', OLD.id, 
+            'owneruuid', OLD.owneruuid,
+            'name', OLD.name,
+            'logintoken', OLD.logintoken,
+            'plugins', OLD.plugins,
+            'state', OLD.state,
+            'servertype', OLD.servertype,
+            'serverid', OLD.serverid),
+        jsonb_build_object(
+            'id', NEW.id, 
+            'owneruuid', NEW.owneruuid,
+            'name', NEW.name,
+            'logintoken', NEW.logintoken,
+            'plugins', NEW.plugins,
+            'state', NEW.state,
+            'servertype', NEW.servertype,
+            'serverid', NEW.serverid))::TEXT);
    RETURN NEW;
 END $$ LANGUAGE PLPGSQL;
 CREATE FUNCTION on_sub_user_delete()
