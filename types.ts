@@ -48,8 +48,8 @@ export interface IUser {
     logintoken: string
     plugins: {
         [key : string] : ({
-            [key : string] : any
-        } & { state : boolean }) | undefined
+            [key : string] : IPluginOptionType[keyof IPluginOptionType]
+        } & { state : boolean })
     }
     state: boolean
     servertype: 'default' | 'horizon' | 'outerRealm' | 'outerRealm&horizon'

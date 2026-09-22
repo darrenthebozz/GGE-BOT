@@ -10,17 +10,9 @@ import {
 } from 'flowbite-vue'
 import plugins from '../../../plugins/index.ts'
 import { IUser, IPlugin } from '../../../types.ts'
+import type { userDefaults } from '../js/userDefaults.ts'
 
-const { user } = defineProps<{ user : IUser }>()
-
-plugins.forEach((plugin) => {
-    user.plugins[plugin.key] ??= {
-        state : false
-    }
-    Object.entries(plugin.options).forEach(([key, val]) => {
-        user.plugins[plugin.key]![key] ??= val.default
-    })
-})
+const { user } = defineProps<{ user: IUser & typeof userDefaults}>()
 
 </script>
 <template>
@@ -31,15 +23,19 @@ plugins.forEach((plugin) => {
                 <fwb-accordion-header class="p-2">
                     <div class="whitespace-nowrap w-full flex flex-row">
                         <div class="m-auto ml-0">{{ key }}</div>
-                        <div class="m-auto mr-0 pt-2"><fwb-toggle v-model="user.plugins[key]!.state" color="green" /></div>
+                        <div class="m-auto mr-0 pt-2">
+                            <fwb-toggle v-model="user.plugins[key].state" color="green" />
+                        </div>
                     </div>
                 </fwb-accordion-header>
                 <fwb-accordion-content class="bg-transparent p-0">
-                    <div class="bg-[#171718] p-2">{{ description }}</div>
+                    <div class="bg-[#171718] p-2" v-if="description">{{ description }}</div>
                     <div v-for="[key2, { type, description }] in Object.entries(options)" :key="key2" class="flex flex-row m-2">
-                        <fwb-toggle v-model="user.plugins[key]![key2]" :label="key2" v-if="type == 'Toggle'" />
-                        <fwb-input v-model="options[key][key2].value" :label="key" type="number"
-                            v-if="type == 'Number'" />
+                        <div class="flex-row flex">
+                            <div class="m-auto pr-2">{{ key }}</div>
+                            <fwb-toggle v-model="user.plugins[key][key2]" :reverse="true" v-if="type == 'Toggle'" />
+                            <fwb-input v-model="user.plugins[key][key2]" type="number"  v-if="type == 'Number'" class="size-8 w-full"/>
+                        </div>
                         <fwb-tooltip>
                             <template #trigger>
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"

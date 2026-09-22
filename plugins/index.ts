@@ -3,7 +3,7 @@ import type { IPlugin } from "../types.ts"
 export const Test = {
     key : "test",
     filePath : "./test.ts",
-    description: "",
+    description: "description",
     options: {
         numberr: { type: "Number", default : 2 },
         string: { type: "Toggle" }

@@ -96,7 +96,7 @@ wss.on('connection', async (ws, { headers }) => {
     activeUsers[uuid].set(ws, activeUser)
 
     ws.send(JSON.stringify([UserAction.get, ...await client.query('Select name, plugins, state, serverType, serverID, id from sub_users WHERE owneruuid=$1', [uuid]).then((a: any) => a.rows)]))
-    ws.send(JSON.stringify([UserAction.plugins, await import("./plugins/index.ts").then(e => e.default)]))
+
     ws.addEventListener("message", async ({ data })  => {
         const [action, obj]: [number, any] = safeParse(data.toString())
 

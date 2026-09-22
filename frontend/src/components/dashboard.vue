@@ -13,10 +13,13 @@ import SubUser from "./sub-user.vue"
 import Setup from "./subuser-setup.vue"
 import UserAction from '../../../modules/CUserAction.ts'
 import ws from '../js/webSocket.ts'
+
 import type { IUser } from '../../../types.d.ts'
+import { userDefaults } from '../js/userDefaults.ts'
 
 const lang = computedAsync<{ [key: string] : string | undefined }>(() => fetch("/lang/en").then(a => a.json()))
-const users = shallowRef<Array<Ref<IUser>>>([])
+
+const users = shallowRef<Array<Ref<IUser | typeof userDefaults>>>([])
 
 ws.addEventListener("message", ({ data }: any) => {
   const [action, ...obj] : [Number, any] = JSON.parse(data.toString())
@@ -25,11 +28,15 @@ ws.addEventListener("message", ({ data }: any) => {
       users.value = obj.map((user) => ref<IUser>(user))
       break
     case UserAction.change: {
-      const user = users.value.find(user => user.value.id == obj[0].id)
-      if(user == undefined) {
-        return (users.value.push(ref<IUser>(obj[0])), triggerRef(users))
+      const userChanges = Object.create({ ...userDefaults, ...obj[0] as IUser })
+      const user = users.value.find(user => user.value.id == userChanges.id)
+      if (user == undefined) {
+        users.value.push(ref<IUser>(userChanges))
+        triggerRef(users)
+        return
       }
-      Object.assign(user.value, obj[0])
+      
+      user.value = userChanges
       break
     }
     case UserAction.delete: {

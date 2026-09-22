@@ -13,6 +13,7 @@ import ws from '../js/webSocket.ts'
 import UserAction from '../../../modules/CUserAction.ts'
 import { FwbButton, FwbModal } from 'flowbite-vue'
 import { IUser } from '../../../types.ts'
+import { userDefaults } from '../js/userDefaults.ts'
 
 const isShowModal = ref(false)
 const closeModal = () => isShowModal.value = false
@@ -20,18 +21,16 @@ const showModal = () => isShowModal.value = true
 
 const { lang } : { readonly lang? : { [key : string] : string } } = defineProps(['lang']) 
 
-const name = ref('')
-const password = ref('')
 const log = ref()
-const server = ref("1")
+const password = ref('')
 const instances = computedAsync(() => import('../js/serverInstances.ts').then(i => i.default)!, [])
 const currentPage = ref(1)
-let loginToken = ""
-const validateUser = () => new Promise((resolve, reject) => {
-    const { zone, server : gameURL } = instances.value.find(({ value }) => Number(server.value) == value)!
 
-    return resolve(loginToken = "fake val")
-    const loginEvents = login(name.value, password.value, zone, gameURL)
+const validateUser = () => new Promise((resolve, reject) => {
+    const { zone, server : gameURL } = instances.value.find(({ value }) => Number(user.value.serverid) == value)!
+
+    return resolve(user.value.logintoken = "fake val")
+    const loginEvents = login(user.value.name, password.value, zone, gameURL)
     loginEvents.addEventListener("TIMEOUT", ({ detail: timeout } : any) => {
         log.value = {
             type: "TIMEOUT",
@@ -49,32 +48,16 @@ const validateUser = () => new Promise((resolve, reject) => {
         }
         reject()
     })
-    loginEvents.addEventListener("LOGGEDIN", ({ detail } : any) => resolve(loginToken = detail))
+    loginEvents.addEventListener("LOGGEDIN", ({ detail } : any) => resolve(user.value.logintoken = detail))
 })
 const closePage = () => {
     currentPage.value = 1
     closeModal()
-
-    ws.send(JSON.stringify([UserAction.add, {
-        name : name.value,
-        loginToken,
-        plugins: {},
-        serverType: 'default',
-        serverID : Number(server.value)
-    }]))
+    console.log({...user.value})
+    // ws.send(JSON.stringify([UserAction.add, { ...user }]))
 }
 const totalPages = 3
-const user = {
-    id: NaN,
-    owneruuid: "",
-    name: "",
-    logintoken: "",
-    plugins: {
-    },
-    state: false,
-    servertype: 'default',
-    serverid: NaN
-} satisfies IUser
+const user = ref<IUser & typeof userDefaults>(Object.create(userDefaults))
 </script>
 <template>
     <div class="w-full flex flex-row-reverse">
@@ -93,7 +76,7 @@ const user = {
             <div class="flex flex-col border-b border-default pb-4 md:pb-5 text-left" v-show="currentPage == 1">
                 <div class="p-2 pt-0">
                     <label for="username" class="block mb-2.5 text-sm font-medium text-heading w-fit">Username</label>
-                    <input type="text" name="username" v-model="name"
+                    <input type="text" name="username" v-model="user.name"
                         class="bg-neutral-secondary-medium border border-default-medium text-heading text-sm rounded-base focus:ring-brand focus:border-brand block w-full px-3 py-2.5 shadow-xs placeholder:text-body"
                         required />
                 </div>
@@ -103,7 +86,7 @@ const user = {
                         class="bg-neutral-secondary-medium border border-default-medium text-heading text-sm rounded-base focus:ring-brand focus:border-brand block w-full px-3 py-2.5 shadow-xs placeholder:text-body"
                         placeholder="••••••••" required />
                 </div>
-                <fwb-select v-model="server" 
+                <fwb-select 
                     :options="instances.map((instance) => {
                         const instanceTemp = {...instance} as unknown as Omit<typeof instance, 'value'> & { value : string }
                         instanceTemp.name = `${lang?.[instance.name] ?? instance.name} ${instance.serverInstance}` 
@@ -111,6 +94,7 @@ const user = {
                         return instanceTemp
                     })"
                     label="Server"
+                    @update:model-value="val => user.serverid = Number(val)"
                     class="p-2 pt-0 min-w-fit"
                     placeholder="" required
                     selectClass="bg-neutral-secondary-medium border border-default-medium text-heading text-sm rounded-base focus:ring-brand focus:border-brand block w-full px-3 py-2.5 shadow-xs placeholder:text-body" />
