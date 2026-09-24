@@ -5,7 +5,7 @@
 @source "../../node_modules/flowbite-vue";
 </style>
 <script setup lang="ts">
-import { onMounted, ref, shallowRef, triggerRef } from 'vue'
+import { onMounted, ref, triggerRef } from 'vue'
 import type { Ref } from 'vue'
 import { initFlowbite } from 'flowbite'
 import { computedAsync } from '@vueuse/core'
@@ -15,32 +15,34 @@ import UserAction from '../../../modules/CUserAction.ts'
 import ws from '../js/webSocket.ts'
 
 import type { IUser } from '../../../types.d.ts'
-import { userDefaults } from '../js/userDefaults.ts'
+import userDefaults from '../../../modules/userDefaults.ts'
 
 const lang = computedAsync<{ [key: string] : string | undefined }>(() => fetch("/lang/en").then(a => a.json()))
 
-const users = shallowRef<Array<Ref<IUser | typeof userDefaults>>>([])
+const users = ref<IUser[]>([])
+
+function createUserObject(obj) {
+  const user = Object.create({ ...structuredClone(userDefaults), ...obj }) as IUser
+  user.plugins = Object.create({ ...structuredClone(userDefaults.plugins), ...user.plugins })
+  return user
+}
 
 ws.addEventListener("message", ({ data }: any) => {
   const [action, ...obj] : [Number, any] = JSON.parse(data.toString())
   switch (action) {
     case UserAction.get:
-      users.value = obj.map((user) => ref<IUser>(user))
+      users.value = obj.map(user => createUserObject(user))
       break
     case UserAction.change: {
-      const userChanges = Object.create({ ...userDefaults, ...obj[0] as IUser })
-      const user = users.value.find(user => user.value.id == userChanges.id)
-      if (user == undefined) {
-        users.value.push(ref<IUser>(userChanges))
-        triggerRef(users)
-        return
-      }
-      
-      user.value = userChanges
+      const userIndex = users.value.findIndex(user => user.id == obj[0].id)
+      if (userIndex == -1)
+        users.value.push(createUserObject(obj[0]))
+      else
+        Object.assign(users.value[userIndex], obj[0])
       break
     }
     case UserAction.delete: {
-      const userIndex = users.value.findIndex(user => user.value.id == obj[0])
+      const userIndex = users.value.findIndex(user => user.id == obj[0])
       if(userIndex == undefined)
         break
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref } from 'vue'
 import ws from '../js/webSocket.ts'
 import { FwbModal } from 'flowbite-vue'
 import UserAction from '../../../modules/CUserAction.ts'
@@ -7,11 +7,11 @@ import type { ILog } from '../../../types.d.ts'
 
 const { userID } : { readonly userID? : number } = defineProps(['userID']) 
 
-const closeModal = () => (isShowModal.value = false, logs.length = 0, ws.send(JSON.stringify([UserAction.log])))
+const closeModal = () => (isShowModal.value = false, logs.value.length = 0, ws.send(JSON.stringify([UserAction.log])))
 const showModal = () => (isShowModal.value = true, ws.send(JSON.stringify([UserAction.log, userID])))
 
 const isShowModal = ref(false)
-const logs = reactive<Array<ILog>>([]) 
+const logs = ref<Array<ILog>>([]) 
 const maxLogSize = 128
 const logColors = {
     "INFO": "green",
@@ -25,17 +25,18 @@ ws.addEventListener("open", () => {
         ws.send(JSON.stringify([UserAction.log, userID]))
 })
 ws.addEventListener("message", ({ data }: any) => {
-  let [action, ...obj] : [number, ...Array<ILog>] = JSON.parse(data.toString())
+  let [action, ...obj] : [number, Array<ILog>] = JSON.parse(data.toString())
     if (action == UserAction.log) {
-        obj.sort((a,b) => Date.parse(a.timestamp) - Date.parse(b.timestamp)).forEach(log => {
+        obj[0].sort((a,b) => Date.parse(a.timestamp) - Date.parse(b.timestamp)).forEach(log => {
             let time = new Date(log.timestamp)
-            log.timestamp = `${time.getHours()}:${time.getMinutes()}`
+            log.timestamp = `${time.getHours()}:${time.getMinutes()}${time.getMinutes() < 10 ? 0 : ""}`
             
-            if (logs.length > maxLogSize)
-                logs.shift()
+            if (logs.value.length > maxLogSize)
+                logs.value.shift()
 
-            logs.push(log)
+            logs.value.push(log)
         })
+        console.log(logs.value)
     }
 })
 </script>

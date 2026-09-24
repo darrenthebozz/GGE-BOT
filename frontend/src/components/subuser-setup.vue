@@ -2,43 +2,37 @@
 import { ref } from 'vue'
 import {
     FwbSelect,
-    FwbPagination,
-    FwbAlert
+    FwbAlert,
+    FwbButton, FwbModal
 } from 'flowbite-vue'
 import { computedAsync } from '@vueuse/core'
 import login from '../js/ggebot.ts'
 import VueCountdown from '@chenfengyuan/vue-countdown'
-import PluginView from './plugin-view.vue'
+import { IUser } from '../../../types.ts'
+import userDefaults from '../../../modules/userDefaults.ts'
 import ws from '../js/webSocket.ts'
 import UserAction from '../../../modules/CUserAction.ts'
-import { FwbButton, FwbModal } from 'flowbite-vue'
-import { IUser } from '../../../types.ts'
-import { userDefaults } from '../js/userDefaults.ts'
 
 const isShowModal = ref(false)
 const closeModal = () => isShowModal.value = false
 const showModal = () => isShowModal.value = true
-
-const { lang } : { readonly lang? : { [key : string] : string } } = defineProps(['lang']) 
-
+const { lang }: { readonly lang?: { [key: string]: string } } = defineProps(['lang'])
 const log = ref()
 const password = ref('')
 const instances = computedAsync(() => import('../js/serverInstances.ts').then(i => i.default)!, [])
-const currentPage = ref(1)
-
 const validateUser = () => new Promise((resolve, reject) => {
-    const { zone, server : gameURL } = instances.value.find(({ value }) => Number(user.value.serverid) == value)!
+    const { zone, server: gameURL } = instances.value.find(({ value }) => Number(user.value.serverid) == value)!
 
     return resolve(user.value.logintoken = "fake val")
     const loginEvents = login(user.value.name, password.value, zone, gameURL)
-    loginEvents.addEventListener("TIMEOUT", ({ detail: timeout } : any) => {
+    loginEvents.addEventListener("TIMEOUT", ({ detail: timeout }: any) => {
         log.value = {
             type: "TIMEOUT",
             value: timeout
         }
         console.log(timeout)
     })
-    loginEvents.addEventListener("ERROR", ({ detail: { r } } : any) => {
+    loginEvents.addEventListener("ERROR", ({ detail: { r } }: any) => {
         switch (r) {
             case 21:
                 log.value = `User not found`
@@ -48,16 +42,9 @@ const validateUser = () => new Promise((resolve, reject) => {
         }
         reject()
     })
-    loginEvents.addEventListener("LOGGEDIN", ({ detail } : any) => resolve(user.value.logintoken = detail))
+    loginEvents.addEventListener("LOGGEDIN", ({ detail }: any) => resolve(user.value.logintoken = detail))
 })
-const closePage = () => {
-    currentPage.value = 1
-    closeModal()
-    console.log({...user.value})
-    // ws.send(JSON.stringify([UserAction.add, { ...user }]))
-}
-const totalPages = 3
-const user = ref<IUser & typeof userDefaults>(Object.create(userDefaults))
+const user = ref<IUser>(Object.create(userDefaults))
 </script>
 <template>
     <div class="w-full flex flex-row-reverse">
@@ -69,11 +56,16 @@ const user = ref<IUser & typeof userDefaults>(Object.create(userDefaults))
             </svg>
         </fwb-button>
     </div>
-
     <fwb-modal @close="closeModal" v-show="isShowModal" header-class="bg-neutral-primary-soft"
         bodyClass="bg-neutral-primary-soft text-white text-right" size="5xl" wrapper-class="max-w-svw md:m-4 m-0">
-        <template #body>
-            <div class="flex flex-col border-b border-default pb-4 md:pb-5 text-left" v-show="currentPage == 1">
+        <template #body class="flex flex-col border-b border-default pb-4 md:pb-5 text-left">
+            <form  @submit.prevent="() => {
+                        validateUser().then(() => {
+                            closeModal()
+                            console.log({ ...user })
+                            ws.send(JSON.stringify([UserAction.add, { ...user }]))
+                        })
+                    }">
                 <div class="p-2 pt-0">
                     <label for="username" class="block mb-2.5 text-sm font-medium text-heading w-fit">Username</label>
                     <input type="text" name="username" v-model="user.name"
@@ -86,18 +78,24 @@ const user = ref<IUser & typeof userDefaults>(Object.create(userDefaults))
                         class="bg-neutral-secondary-medium border border-default-medium text-heading text-sm rounded-base focus:ring-brand focus:border-brand block w-full px-3 py-2.5 shadow-xs placeholder:text-body"
                         placeholder="••••••••" required />
                 </div>
-                <fwb-select 
-                    :options="instances.map((instance) => {
-                        const instanceTemp = {...instance} as unknown as Omit<typeof instance, 'value'> & { value : string }
-                        instanceTemp.name = `${lang?.[instance.name] ?? instance.name} ${instance.serverInstance}` 
-                        instanceTemp.value = String(instanceTemp.value)
-                        return instanceTemp
-                    })"
-                    label="Server"
-                    @update:model-value="val => user.serverid = Number(val)"
-                    class="p-2 pt-0 min-w-fit"
-                    placeholder="" required
-                    selectClass="bg-neutral-secondary-medium border border-default-medium text-heading text-sm rounded-base focus:ring-brand focus:border-brand block w-full px-3 py-2.5 shadow-xs placeholder:text-body" />
+                <div class="p-2 pt-0">
+                    <label class="block mb-2.5 text-sm font-medium text-heading w-fit">Server</label>
+                    <fwb-select
+                        :options="instances.map(i => ({ name: `${lang?.[i.name] ?? i.name} ${i.serverInstance}`, value: String(i.value) }))"
+                        v-model="user.serverid" required
+                        class="border border-default-medium bg-neutral-secondary-medium dark:bg-neutral-secondary-medium text-heading text-sm focus:ring-brand focus:border-brand block w-full pl-2 py-2.5">
+                    </fwb-select>
+                </div>
+                <div class="p-2 pt-0">
+                    <label class="block mb-2.5 text-sm font-medium text-heading w-fit">Server</label>
+                    <fwb-select :options="[
+                        { value: 'default', name: 'Default' },
+                        { value: 'horizon', name: 'Horizon' },
+                        { value: 'outerRealm', name: 'Outer Realm' },
+                    ]" v-model="user.servertype" required
+                        class="border border-default-medium bg-neutral-secondary-medium dark:bg-neutral-secondary-medium text-heading text-sm focus:ring-brand focus:border-brand block w-full pl-2 py-2.5">
+                    </fwb-select>
+                </div>
                 <fwb-alert v-if="typeof log === 'string'" type="danger" class="mr-2 ml-2 mt-1">
                     {{ log }}
                 </fwb-alert>
@@ -106,21 +104,9 @@ const user = ref<IUser & typeof userDefaults>(Object.create(userDefaults))
                         Waiting {{ minutes }} minutes, {{ seconds }} seconds before continuing
                     </vue-countdown>
                 </fwb-alert>
-            </div>
-            <div class="flex flex-col border-b border-default pb-4 md:pb-5 text-left" v-show="currentPage == 2">
-                <PluginView :user="user" />
-            </div>
-            <fwb-pagination v-model="currentPage" :layout="'navigation'" :total-pages="totalPages" large class="mt-4">
-                <template #prev-button hidden />
-                <template #next-button="{ disabled, increasePage }">
-                    <button
-                        class="disabled:cursor-not-allowed ml-0 m-auto flex h-8 items-center justify-center border border-purple-300 bg-purple-200 px-4 py-4 leading-tight text-gray-500 first:rounded-l-lg last:rounded-r-lg hover:bg-purple-300 hover:text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
-                        :disabled="disabled"
-                        @click="currentPage == totalPages - 1 ? closePage() : validateUser().then(increasePage)">
-                        {{ currentPage != totalPages - 1 ? "Next" : "Save" }}
-                    </button>
-                </template>
-            </fwb-pagination>
+                <button type="submit"
+                    class="m-2 text-white bg-neutral-secondary-medium box-border border border-transparent hover:bg-blue-600 focus:ring-4 focus:ring-brand-medium shadow-xs font-medium leading-5 rounded-base text-sm px-4 py-2.5 focus:outline-none">Finish</button>
+            </form>
         </template>
     </fwb-modal>
 </template>

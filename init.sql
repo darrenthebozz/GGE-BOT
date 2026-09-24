@@ -1,5 +1,5 @@
 CREATE TYPE VerbosityLevel AS ENUM ('INFO', 'WARNING', 'ERROR', 'DEBUG');
-CREATE TYPE ServerType AS ENUM ('default', 'horizon', 'outerRealm', 'outerRealm&horizon');
+CREATE TYPE ServerType AS ENUM ('default', 'horizon', 'outerRealm');
 CREATE TYPE SubUserLog AS (
     timestamp TIMESTAMP,
     data      TEXT[],

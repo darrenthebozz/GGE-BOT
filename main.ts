@@ -3,6 +3,7 @@ import { Worker } from 'node:worker_threads'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import http from 'node:http'
+import util from 'node:util'
 import EmbeddedPostgres from 'embedded-postgres'
 import { WebSocketServer, WebSocket } from 'ws'
 import express from 'express'
@@ -11,6 +12,7 @@ import { handler as ssrHandler } from './frontend/dist/server/entry.mjs'
 import IterableWeakMap from './modules/IterableWeakMap.ts'
 import UserAction from './modules/CUserAction.ts'
 import EventEmitter from './modules/EventEmitter.ts'
+import userDefaults from './modules/userDefaults.ts'
 import exampleConfig from './ggeConfig.json' with { type: 'json' }
 import type { IUser, IBotConfig, ILog, IUserEvents } from './types.d.ts'
 
@@ -65,9 +67,12 @@ userEvents.on('history_update', payload => {
         id == logSubuserID && ws.send(JSON.stringify([UserAction.log, { timestamp, data, loglevel }])))
 })
 userEvents.on('sub_user_update', payload => {
-    const [oldUser, newUser] = JSON.parse(payload) as [IUser & { [key : string] : any}, IUser & { [key : string] : any}]
+    const [oldUser, newUser] = JSON.parse(payload) as [Partial<IUser> & { [key : string] : any}, IUser & { [key : string] : any}]
     const userChanges = (oldUser ? Object.entries(oldUser).reduce((obj: any, [key, value]) =>
         (newUser[key] != value && (obj[key] = newUser[key]), obj), {}) : newUser) as Partial<IUser>
+    
+    if(util.isDeepStrictEqual(oldUser.plugins, newUser.plugins))
+        delete userChanges.plugins
 
     userChanges.id = newUser.id
 
@@ -102,18 +107,17 @@ wss.on('connection', async (ws, { headers }) => {
 
         switch (action) {
             case UserAction.add:
+                const userChanges = Object.create({ ...structuredClone(userDefaults), ...obj }) as IUser
+                userChanges.plugins = Object.create({ ...structuredClone(userDefaults.plugins), ...userChanges.plugins })
                 client.query('INSERT INTO sub_users(name, loginToken, plugins, serverType, serverID, owneruuid) VALUES($2,$3,$4,$5,$6,$1)',
-                    [uuid, ...Object.values(obj)])
+                    [uuid, userChanges.name, userChanges.logintoken, {}, userChanges.servertype, userChanges.serverid])
                 break
             case UserAction.change:
                 let i = 3
                 client.query("UPDATE sub_users SET " + (
-                    (obj.name ? `name=$${i++},` : '') +
                     (obj.loginToken ? `loginToken=$${i++},` : '') +
                     (obj.plugins ? `plugins=$${i++},` : '') +
-                    (obj.state != undefined ? `state=$${i++},` : '') +
-                    (obj.serverType ? `serverType=$${i++},` : '') +
-                    (obj.serverID ? `serverID=$${i++}` : '')
+                    (obj.state != undefined ? `state=$${i++},` : '')
                 ).replace(/\,$/, '') + " WHERE owneruuid=$1 AND id=$2", [uuid, ...Object.values(obj)])
                 break
             case UserAction.delete:

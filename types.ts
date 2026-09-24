@@ -1,3 +1,4 @@
+import type userDefaults from './modules/userDefaults.ts'
 export type TLogLevel = 'INFO' | 'WARNING' | 'ERROR' | 'DEBUG'
 export interface ILog {
     timestamp : string
@@ -41,7 +42,7 @@ export interface IInstance {
       zone: string
       server: string
 }
-export interface IUser {
+export type IUser = typeof userDefaults & {
     id: number
     owneruuid: string
     name: string
@@ -52,7 +53,7 @@ export interface IUser {
         } & { state : boolean })
     }
     state: boolean
-    servertype: 'default' | 'horizon' | 'outerRealm' | 'outerRealm&horizon'
+    servertype: 'default' | 'horizon' | 'outerRealm'
     serverid: number
 }
 export interface IUserEvents { 

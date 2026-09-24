@@ -1,20 +1,16 @@
 <script setup lang='ts'>
-import { reactive } from 'vue'
 import CastleView from './castle-view.vue'
+import SubUserSettings from './subuser-settings.vue'
 import UserAction from '../../../modules/CUserAction.ts'
 import webSocket from '../js/webSocket.ts'
 import Log from './log.vue'
-import type { Ref } from 'vue'
 import type { IUser } from '../../../types.d.ts'
 
-const props = defineProps(['user']) as { user : Ref<IUser> }
-const user = reactive(props.user)
-const server = props.user.value.serverid
-const settings = () => {}
-const changeUserState = () => 
-        webSocket.send(JSON.stringify([UserAction.change, { id: user.value.id, state: user.value.state }]))
+const { user } = defineProps<{ user: IUser }>()
+const changeUserState = (state) => 
+        webSocket.send(JSON.stringify([UserAction.change, { id: user.id, state }]))
 const deleteUser = () => 
-        webSocket.send(JSON.stringify([UserAction.delete, user.value.id]))
+        webSocket.send(JSON.stringify([UserAction.delete, user.id]))
 
 </script>
 <template>
@@ -24,21 +20,14 @@ const deleteUser = () =>
                                 <dt class="mr-2 text-body">Name</dt>
                                 <dd class="mr-2 text-lg font-medium">{{ user.name }}</dd>
                                 <dt class="mr-2 text-body">Server</dt>
-                                <dd class="mr-2 text-lg font-medium">{{ server }}</dd>
+                                <dd class="mr-2 text-lg font-medium">{{ user.serverid }}</dd>
                         </div>
                         <div class="ml-auto mb-auto mt-auto mr-1 whitespace-nowrap flex flex-row gap-2">
                                         <Log :userID="user.id"/>
-                                        <svg 
-                                                v-on:click="settings"
-                                                class="w-5 h-5 hover:text-blue-600" aria-hidden="true"
-                                                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
-                                                <path stroke="currentColor" stroke-linecap="round"
-                                                        stroke-linejoin="round" stroke-width="1"
-                                                        d="M4 12.25V1m0 11.25a2.25 2.25 0 0 0 0 4.5m0-4.5a2.25 2.25 0 0 1 0 4.5M4 19v-2.25m6-13.5V1m0 2.25a2.25 2.25 0 0 0 0 4.5m0-4.5a2.25 2.25 0 0 1 0 4.5M10 19V7.75m6 4.5V1m0 11.25a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5ZM16 19v-2"/>
-                                        </svg>
+                                        <SubUserSettings :user="user"/>
                                         <svg 
                                                 v-show="!user.state"
-                                                v-on:click="user.state = true, changeUserState()"
+                                                v-on:click="changeUserState(!user.state)"
                                                 class="w-5 h-5 hover:text-blue-600"
                                                 xmlns="http://www.w3.org/2000/svg"
                                                 fill="none"
@@ -52,7 +41,7 @@ const deleteUser = () =>
                                         </svg>
                                         <svg
                                                 v-show="user.state"
-                                                v-on:click="user.state = false, changeUserState()"
+                                                v-on:click="changeUserState(!user.state)"
                                                 class="w-5 h-5 hover:text-blue-600"
                                                 xmlns="http://www.w3.org/2000/svg" 
                                                 fill="none" 
