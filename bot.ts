@@ -47,6 +47,7 @@ userEvents.on('sub_user_update', payload => {
         close()
 
 })
+
 userEvents.on('sub_user_delete', close)
 
 const err = await import('./err.json', { with: { type: "json" } }).then(e =>
@@ -57,8 +58,8 @@ export const config = await readFile(configPath, 'utf-8').then(str => {
     return Object.assign({ url : new URL(config.url)}, config)
 })
 const instances = await fetch(config.url.toString() + "/server").then(a => a.json()) as IInstance[]
-const { name, plugins, servertype, serverid, logintoken } =
-    (await client.query('SELECT name, plugins, serverType, serverID, loginToken FROM sub_users WHERE id=$1', [id])
+const { name, plugins, servertype, serverid, logintoken, state } =
+    (await client.query('SELECT name, plugins, serverType, serverID, loginToken, state FROM sub_users WHERE id=$1', [id])
         .then(e => e.rows[0] as IUser))
 const { server, zone } = instances.find(instance => instance.value == serverid)!
 const ws = new WebSocket(`wss://${server}`)
@@ -214,6 +215,9 @@ xtHandler.on("lli", async (obj, result) => {
         retry()
     else close()
 })
+
+if(state == false)
+    close()
 
 Promise.allSettled(Array.from(Object.entries(plugins)).map(([key, object]) => {
     if(!object?.state)

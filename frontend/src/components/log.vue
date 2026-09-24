@@ -6,10 +6,8 @@ import UserAction from '../../../modules/CUserAction.ts'
 import type { ILog } from '../../../types.d.ts'
 
 const { userID } : { readonly userID? : number } = defineProps(['userID']) 
-
 const closeModal = () => (isShowModal.value = false, logs.value.length = 0, ws.send(JSON.stringify([UserAction.log])))
 const showModal = () => (isShowModal.value = true, ws.send(JSON.stringify([UserAction.log, userID])))
-
 const isShowModal = ref(false)
 const logs = ref<Array<ILog>>([]) 
 const maxLogSize = 128
@@ -36,7 +34,6 @@ ws.addEventListener("message", ({ data }: any) => {
 
             logs.value.push(log)
         })
-        console.log(logs.value)
     }
 })
 </script>
