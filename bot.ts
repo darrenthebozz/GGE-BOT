@@ -216,9 +216,6 @@ xtHandler.on("lli", async (obj, result) => {
     else close()
 })
 
-if(state == false)
-    close()
-
 Promise.allSettled(Array.from(Object.entries(plugins)).map(([key, object]) => {
     if(!object?.state)
         return
@@ -229,11 +226,7 @@ Promise.allSettled(Array.from(Object.entries(plugins)).map(([key, object]) => {
         return console.warn(key, " missing") 
     
     return import(`./plugins/${normalize(pluginData.filePath)}`)
-})).then(() => {
-    console.log("Starting Bot")
-    console.log(name)
-    console.log(server)
-    console.log(zone)
+})).then(() => console.log("Starting Bot"))
 
-    events.emit("load")
-})
+if(state == false)
+    close()
