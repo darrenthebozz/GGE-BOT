@@ -6,16 +6,15 @@
 </style>
 <script setup lang="ts">
 import { onMounted, ref, triggerRef } from 'vue'
-import type { Ref } from 'vue'
 import { initFlowbite } from 'flowbite'
 import { computedAsync } from '@vueuse/core'
 import SubUser from "./sub-user.vue"
 import Setup from "./subuser-setup.vue"
 import UserAction from '../../../modules/CUserAction.ts'
+import userDefaults from '../../../modules/userDefaults.ts'
 import ws from '../js/webSocket.ts'
 
 import type { IUser } from '../../../types.d.ts'
-import userDefaults from '../../../modules/userDefaults.ts'
 
 const lang = computedAsync<{ [key: string] : string | undefined }>(() => fetch("/lang/en").then(a => a.json()))
 
@@ -66,6 +65,6 @@ onMounted(() => ws.reconnect())
 <template>
   <Setup :lang="lang"/>
   <span v-for="user in users" class="overflow-x-hidden">
-    <SubUser :user="user" />
+    <SubUser :user="user" :lang="lang" />
   </span>
 </template>

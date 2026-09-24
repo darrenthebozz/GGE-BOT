@@ -1,16 +1,23 @@
 <script setup lang='ts'>
+import { computedAsync } from '@vueuse/core'
 import CastleView from './castle-view.vue'
 import SubUserSettings from './subuser-settings.vue'
 import UserAction from '../../../modules/CUserAction.ts'
 import webSocket from '../js/webSocket.ts'
 import Log from './log.vue'
 import type { IUser } from '../../../types.d.ts'
+import { ref, watch } from 'vue'
 
-const { user } = defineProps<{ user: IUser }>()
-const changeUserState = (state) => 
-        webSocket.send(JSON.stringify([UserAction.change, { id: user.id, state }]))
-const deleteUser = () => 
-        webSocket.send(JSON.stringify([UserAction.delete, user.id]))
+const { user, lang } = defineProps<{ user: IUser, readonly lang?: { [key: string]: string } }>()
+const changeUserState = state => webSocket.send(JSON.stringify([UserAction.change, { id: user.id, state }]))
+const deleteUser = () => webSocket.send(JSON.stringify([UserAction.delete, user.id]))
+const instances = computedAsync(() => import('../js/serverInstances.ts').then(i => i.default)!, [])
+const serverName = ref("")
+
+watch(instances, () => {
+        let currentInstance = instances.value.find(i => i.value == user.serverid) ?? { name :"", serverInstance: "" }
+        serverName.value = `${lang?.[currentInstance.name] ?? currentInstance.name} ${currentInstance.serverInstance}`
+})
 
 </script>
 <template>
@@ -20,7 +27,7 @@ const deleteUser = () =>
                                 <dt class="mr-2 text-body">Name</dt>
                                 <dd class="mr-2 text-lg font-medium">{{ user.name }}</dd>
                                 <dt class="mr-2 text-body">Server</dt>
-                                <dd class="mr-2 text-lg font-medium">{{ user.serverid }}</dd>
+                                <dd class="mr-2 text-lg font-medium">{{ serverName }}</dd>
                         </div>
                         <div class="ml-auto mb-auto mt-auto mr-1 whitespace-nowrap flex flex-row gap-2">
                                         <Log :userID="user.id"/>

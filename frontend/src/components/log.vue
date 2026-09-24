@@ -45,7 +45,8 @@ ws.addEventListener("message", ({ data }: any) => {
         </path>
     </svg>
     <fwb-modal @close="closeModal" v-show="isShowModal" header-class="bg-neutral-primary-soft"
-        bodyClass="bg-neutral-primary-soft text-white text-right" size="5xl" wrapper-class="max-w-svw md:m-4 m-0">
+        bodyClass="bg-neutral-primary-soft text-white text-right" size="5xl" wrapper-class="max-w-svw md:m-4 m-0"
+        class="absolute text-wrap">
         <template #body>
             <div v-for="{data, loglevel, timestamp} in logs" :class='`text-left text-${logColors[loglevel]}-600`'>
                 [{{timestamp}}] {{ data.join('') }}

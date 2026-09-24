@@ -11,9 +11,16 @@ import {
     FwbModal
 } from 'flowbite-vue'
 import plugins from '../../../plugins/index.ts'
+import userDefaults from '../../../modules/userDefaults.ts'
 import type { IUser, IPlugin } from '../../../types.ts'
 
-const { user } = defineProps<{ user: IUser }>()
+function createUserObject(obj) {
+  const user = Object.create({ ...structuredClone(userDefaults), ...obj }) as IUser
+  user.plugins = Object.create({ ...structuredClone(userDefaults.plugins), ...user.plugins })
+  return user
+}
+const { user: _user } = defineProps<{ user: IUser }>()
+const user = createUserObject(_user)
 const isShowModal = ref(false)
 const closeModal = () => isShowModal.value = false
 const showModal = () => isShowModal.value = true
@@ -25,7 +32,8 @@ const showModal = () => isShowModal.value = true
             d="M4 12.25V1m0 11.25a2.25 2.25 0 0 0 0 4.5m0-4.5a2.25 2.25 0 0 1 0 4.5M4 19v-2.25m6-13.5V1m0 2.25a2.25 2.25 0 0 0 0 4.5m0-4.5a2.25 2.25 0 0 1 0 4.5M10 19V7.75m6 4.5V1m0 11.25a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5ZM16 19v-2" />
     </svg>
     <fwb-modal @close="closeModal" v-show="isShowModal" header-class="bg-neutral-primary-soft"
-        bodyClass="bg-neutral-primary-soft text-white text-right" size="5xl" wrapper-class="max-w-svw md:m-4 m-0">
+        bodyClass="bg-neutral-primary-soft text-white text-right" size="5xl" wrapper-class="max-w-svw md:m-4 m-0"
+        class="absolute">
         <template #body>
             <div
                 class="flex flex-col max-h-96 overflow-y-auto scrollbar-color scrollbar-thumb-[#2D2E36] scrollbar-track-[#05040C] scrollbar-thin">

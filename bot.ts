@@ -160,6 +160,7 @@ export const waitForResult = (key: string, timeout: number, func?: (data: object
     })
 function retry() {
     if (servertype != "default") {
+        //TODO:
         client.query('SELECT name, plugins, serverType, serverID, loginToken FROM sub_users WHERE id=$1', [id])
 
         return sendXT("tlep", JSON.stringify({ TLT: logintoken }))
