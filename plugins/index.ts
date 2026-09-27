@@ -8,6 +8,12 @@ export const Test = {
         numberr: { type: "Number", default : 2 },
         string: { type: "Toggle" }
     }
-} as const satisfies IPlugin
+} satisfies IPlugin
+//as const
+let i = 0
+const test = Array<typeof Test>(100).fill(Test).map(e=> structuredClone(e))
 
-export default [Test] as IPlugin[]
+//.map(e => (, e))
+test.forEach(e => e.key = `${e.key}${i++}`)
+console.log(test)
+export default test as IPlugin[]

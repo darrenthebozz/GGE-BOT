@@ -106,13 +106,15 @@ wss.on('connection', async (ws, { headers }) => {
         const [action, obj]: [number, any] = safeParse(data.toString())
 
         switch (action) {
-            case UserAction.add:
-                const userChanges = Object.create({ ...structuredClone(userDefaults), ...obj }) as IUser
-                userChanges.plugins = Object.create({ ...structuredClone(userDefaults.plugins), ...userChanges.plugins })
-                client.query('INSERT INTO sub_users(name, loginToken, plugins, serverType, serverID, owneruuid) VALUES($2,$3,$4,$5,$6,$1)',
-                    [uuid, userChanges.name, userChanges.logintoken, {}, userChanges.servertype, userChanges.serverid])
-                break
             case UserAction.change:
+                if (userChanges.id) {
+                    const userChanges = Object.create({ ...structuredClone(userDefaults), ...obj }) as IUser
+                    userChanges.plugins = Object.create({ ...structuredClone(userDefaults.plugins), ...userChanges.plugins })
+                    client.query('INSERT INTO sub_users(name, loginToken, plugins, serverType, serverID, owneruuid) VALUES($2,$3,$4,$5,$6,$1)',
+                        [uuid, userChanges.name, userChanges.logintoken, {}, userChanges.servertype, userChanges.serverid])
+                    break
+                }
+
                 let i = 3
                 client.query("UPDATE sub_users SET " + (
                     (obj.loginToken ? `loginToken=$${i++},` : '') +

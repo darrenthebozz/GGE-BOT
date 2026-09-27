@@ -1,22 +1,22 @@
 <script setup lang='ts'>
-import { computedAsync } from '@vueuse/core'
 import CastleView from './castle-view.vue'
 import SubUserSettings from './subuser-settings.vue'
 import UserAction from '../../../modules/CUserAction.ts'
 import webSocket from '../js/webSocket.ts'
 import Log from './log.vue'
 import type { IUser } from '../../../types.d.ts'
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
 
-const { user, lang } = defineProps<{ user: IUser, readonly lang?: { [key: string]: string } }>()
+const { user, lang } = defineProps<{ user: IUser, readonly lang?: { [key: string]: string | undefined } }>()
 const changeUserState = state => webSocket.send(JSON.stringify([UserAction.change, { id: user.id, state }]))
 const deleteUser = () => webSocket.send(JSON.stringify([UserAction.delete, user.id]))
-const instances = computedAsync(() => import('../js/serverInstances.ts').then(i => i.default)!, [])
 const serverName = ref("")
 
-watch(instances, () => {
-        let currentInstance = instances.value.find(i => i.value == user.serverid) ?? { name :"", serverInstance: "" }
+import('../js/serverInstances.ts').then(i => i.default)!.then(instances => {
+
+        let currentInstance = instances.find(i => i.value == user.serverid) ?? { name :"", serverInstance: "" }
         serverName.value = `${lang?.[currentInstance.name] ?? currentInstance.name} ${currentInstance.serverInstance}`
+        return instances
 })
 
 </script>
@@ -31,7 +31,7 @@ watch(instances, () => {
                         </div>
                         <div class="ml-auto mb-auto mt-auto mr-1 whitespace-nowrap flex flex-row gap-2">
                                         <Log :userID="user.id"/>
-                                        <SubUserSettings :user="user"/>
+                                        <SubUserSettings :user="user" :lang="lang"/>
                                         <svg 
                                                 v-show="!user.state"
                                                 v-on:click="changeUserState(!user.state)"

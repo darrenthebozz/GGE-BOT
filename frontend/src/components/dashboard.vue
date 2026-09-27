@@ -5,32 +5,29 @@
 @source "../../node_modules/flowbite-vue";
 </style>
 <script setup lang="ts">
-import { onMounted, ref, triggerRef } from 'vue'
+import { onMounted, ref } from 'vue'
 import { initFlowbite } from 'flowbite'
-import { computedAsync } from '@vueuse/core'
 import SubUser from "./sub-user.vue"
-import Setup from "./subuser-setup.vue"
+import Setup from "./subuser-settings.vue"
 import UserAction from '../../../modules/CUserAction.ts'
 import userDefaults from '../../../modules/userDefaults.ts'
 import ws from '../js/webSocket.ts'
-
 import type { IUser } from '../../../types.d.ts'
 
-const lang = computedAsync<{ [key: string] : string | undefined }>(() => fetch("/lang/en").then(a => a.json()))
-
+const lang = await fetch("/lang/en").then(a => a.json())
 const users = ref<IUser[]>([])
 
-function createUserObject(obj) {
-  const user = Object.create({ ...structuredClone(userDefaults), ...obj }) as IUser
-  user.plugins = Object.create({ ...structuredClone(userDefaults.plugins), ...user.plugins })
+function createUserObject(obj: IUser) {
+  const user = { ...structuredClone(userDefaults), ...obj }
+  user.plugins = { ...structuredClone(userDefaults.plugins), ...user.plugins }
   return user
 }
 
 ws.addEventListener("message", ({ data }: any) => {
-  const [action, ...obj] : [Number, any] = JSON.parse(data.toString())
+  const [action, ...obj]: [Number, any] = JSON.parse(data.toString())
   switch (action) {
     case UserAction.get:
-      users.value = obj.map(user => createUserObject(user))
+      users.value = obj.map(createUserObject)
       break
     case UserAction.change: {
       const userIndex = users.value.findIndex(user => user.id == obj[0].id)
@@ -42,11 +39,10 @@ ws.addEventListener("message", ({ data }: any) => {
     }
     case UserAction.delete: {
       const userIndex = users.value.findIndex(user => user.id == obj[0])
-      if(userIndex == undefined)
+      if (userIndex == undefined)
         break
 
-      console.debug(users.value.splice(userIndex, 1))
-      triggerRef(users)
+      users.value.splice(userIndex, 1)
       break
     }
   }
@@ -63,7 +59,9 @@ onMounted(initFlowbite)
 onMounted(() => ws.reconnect())
 </script>
 <template>
-  <Setup :lang="lang"/>
+  <div class="p-2 md:p-4 text-heading text-sm border border-default rounded-base shadow w-full flex flex-row-reverse">
+    <Setup :lang="lang"/>
+  </div>
   <span v-for="user in users" class="overflow-x-hidden">
     <SubUser :user="user" :lang="lang" />
   </span>
