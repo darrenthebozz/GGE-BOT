@@ -5,6 +5,7 @@ import { getCallSites } from 'node:util'
 import { RateLimiter } from 'limiter'
 import client from './modules/database.ts'
 import EventEmitter from './modules/EventEmitter.ts'
+import createUserObject from './modules/createUserObject.ts'
 import exampleConfig from './ggeConfig.json' with { type: 'json' }
 import pluginConfig from './plugins/index.ts'
 import type { IBotConfig, IUser, IInstance, IUserEvents, IPlugin, IPluginOptionValueType } from './types.ts'
@@ -60,7 +61,7 @@ export const config = await readFile(configPath, 'utf-8').then(str => {
 const instances = await fetch(config.url.toString() + "/server").then(a => a.json()) as IInstance[]
 const { name, plugins, servertype, serverid, logintoken, state } =
     (await client.query('SELECT name, plugins, serverType, serverID, loginToken, state FROM sub_users WHERE id=$1', [id])
-        .then(e => e.rows[0] as IUser))
+        .then(e => createUserObject(e.rows[0])))
 const { server, zone } = instances.find(instance => instance.value == serverid)!
 const ws = new WebSocket(`wss://${server}`)
 

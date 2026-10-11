@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import {
     FwbSelect,
     FwbAccordion,
@@ -13,7 +13,7 @@ import {
 } from 'flowbite-vue'
 import { computedAsync } from '@vueuse/core'
 import plugins from '../../../plugins/index.ts'
-import userDefaults from '../../../modules/userDefaults.ts'
+import createUserObject from '../../../modules/createUserObject.ts'
 import type { IUser, IPlugin } from '../../../types.ts'
 import ws from '../js/webSocket.ts'
 import validateUser from '../js/validateUser.ts'
@@ -26,15 +26,16 @@ const log = ref({})
 const password = ref('')
 const closeModal = () => isShowModal.value = false
 const showModal = () => isShowModal.value = true
+const user = ref<IUser>(_user ? _user : createUserObject())
+watch(isShowModal, () => {
+    if (!_user) {
+        user.value = createUserObject()
+        console.log(user.value)
+    }
+    password.value = ""
+    log.value = {}
+})
 
-function createUserObject(user : IUser) {
-  Object.setPrototypeOf(user, userDefaults)
-  let user2 = Object.create(user)
-  user2.plugins = {}
-  Object.setPrototypeOf(user2.plugins, userDefaults.plugins)
-  return user2
-}
-const user = ref<IUser>(_user ? createUserObject(_user) : Object.create(userDefaults))
 </script>
 <template>
     <svg @click="showModal" v-if="!_user" xmlns="http://www.w3.org/2000/svg" 
@@ -47,15 +48,14 @@ const user = ref<IUser>(_user ? createUserObject(_user) : Object.create(userDefa
         <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"
             d="M4 12.25V1m0 11.25a2.25 2.25 0 0 0 0 4.5m0-4.5a2.25 2.25 0 0 1 0 4.5M4 19v-2.25m6-13.5V1m0 2.25a2.25 2.25 0 0 0 0 4.5m0-4.5a2.25 2.25 0 0 1 0 4.5M10 19V7.75m6 4.5V1m0 11.25a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5ZM16 19v-2" />
     </svg>
-    <fwb-modal @close="closeModal" v-show="isShowModal" header-class="bg-neutral-primary-soft"
+    <fwb-modal @close="closeModal" v-if="isShowModal" header-class="bg-neutral-primary-soft"
         bodyClass="bg-neutral-primary-soft text-white text-right" size="5xl" wrapper-class="max-w-svw md:m-4 m-0"
         class="absolute">
         <template #body>
             <form @submit.prevent="() => {
                 validateUser(user, password, curlog => log = curlog).then(() => {
-                    closeModal()
-                    console.log({ ...user })
                     ws.send(JSON.stringify([UserAction.change, { ...user, id : user.id }]))
+                    closeModal()
                 }).catch(err => log = err)
             }">
                 <div class="p-2 pt-0">

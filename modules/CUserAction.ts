@@ -1,1 +1,1 @@
-export default { add: 0, change: 1, delete: 2, get: 3, log : 4, plugins : 5 } as const
+export default { change: 0, delete: 1, get: 2, log : 3, plugins : 4 } as const

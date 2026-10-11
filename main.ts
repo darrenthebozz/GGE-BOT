@@ -107,7 +107,7 @@ wss.on('connection', async (ws, { headers }) => {
 
         switch (action) {
             case UserAction.change:
-                if (userChanges.id) {
+                if (!obj.id) {
                     const userChanges = Object.create({ ...structuredClone(userDefaults), ...obj }) as IUser
                     userChanges.plugins = Object.create({ ...structuredClone(userDefaults.plugins), ...userChanges.plugins })
                     client.query('INSERT INTO sub_users(name, loginToken, plugins, serverType, serverID, owneruuid) VALUES($2,$3,$4,$5,$6,$1)',

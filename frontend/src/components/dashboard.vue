@@ -10,31 +10,29 @@ import { initFlowbite } from 'flowbite'
 import SubUser from "./sub-user.vue"
 import Setup from "./subuser-settings.vue"
 import UserAction from '../../../modules/CUserAction.ts'
-import userDefaults from '../../../modules/userDefaults.ts'
+import createUserObject from '../../../modules/createUserObject.ts'
 import ws from '../js/webSocket.ts'
 import type { IUser } from '../../../types.d.ts'
 
 const lang = await fetch("/lang/en").then(a => a.json())
 const users = ref<IUser[]>([])
 
-function createUserObject(obj: IUser) {
-  const user = { ...structuredClone(userDefaults), ...obj }
-  user.plugins = { ...structuredClone(userDefaults.plugins), ...user.plugins }
-  return user
-}
-
 ws.addEventListener("message", ({ data }: any) => {
   const [action, ...obj]: [Number, any] = JSON.parse(data.toString())
   switch (action) {
     case UserAction.get:
-      users.value = obj.map(createUserObject)
+      users.value = obj.map((obj1) => {
+        const newUser = createUserObject(obj1)
+        console.log(newUser.plugins.test0.state)
+        return newUser
+    })
       break
     case UserAction.change: {
       const userIndex = users.value.findIndex(user => user.id == obj[0].id)
       if (userIndex == -1)
         users.value.push(createUserObject(obj[0]))
       else
-        Object.assign(users.value[userIndex], obj[0])
+        users.value[userIndex] = createUserObject(obj[0])
       break
     }
     case UserAction.delete: {

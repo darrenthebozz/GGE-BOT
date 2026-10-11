@@ -42,7 +42,7 @@ export interface IInstance {
       zone: string
       server: string
 }
-export type IUser = typeof userDefaults & {
+export type IUser = typeof userDefaults | {
     id: number
     owneruuid: string
     name: string
