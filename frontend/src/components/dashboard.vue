@@ -32,7 +32,7 @@ ws.addEventListener("message", ({ data }: any) => {
       if (userIndex == -1)
         users.value.push(createUserObject(obj[0]))
       else
-        users.value[userIndex] = createUserObject(obj[0])
+        users.value[userIndex] = createUserObject({ ...users.value[userIndex], ...obj[0] })
       break
     }
     case UserAction.delete: {

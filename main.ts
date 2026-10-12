@@ -78,6 +78,9 @@ userEvents.on('sub_user_update', payload => {
 
     if (userChanges.state == true)
         startBot(newUser.id, newUser.owneruuid)
+    
+    if(Object.keys(userChanges).length == 1) //FIX?
+        return
 
     Array.from(activeUsers[newUser.owneruuid]?.keys() ?? []).forEach(ws =>
         ws.send(JSON.stringify([UserAction.change, userChanges])))
