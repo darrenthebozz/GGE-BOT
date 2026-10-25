@@ -9,7 +9,7 @@ async function runBuild() {
     platform: 'node',                  // Target the Node.js runtime environment
     format: 'esm',                     // Output standard ES modules ('cjs' for CommonJS)
     outdir: 'dist/server/',          // The final output file path
-    sourcemap: true,                   // Generate sourcemaps for debugging
+    sourcemap: false,                   // Generate sourcemaps for debugging
     minify: true,//process.env.NODE_ENV === 'production', // Minify code only for production
     external: [
       '@embedded-postgres'
@@ -20,7 +20,7 @@ async function runBuild() {
     packages: 'bundle'
   });
 
-  await cp('./src/frontend/dist/client', './dist/client', { recursive: true });
+  // await cp('./src/frontend/dist/client', './dist/client', { recursive: true });
 
   console.log('Build complete!');
 }
