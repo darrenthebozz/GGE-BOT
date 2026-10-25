@@ -1,0 +1,2 @@
+const UserAction = { change: 0, delete: 1, get: 2, log : 3, plugins : 4 } as const
+export default UserAction

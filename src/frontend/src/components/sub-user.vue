@@ -1,0 +1,75 @@
+<script setup lang='ts'>
+import CastleView from './castle-view.vue'
+import SubUserSettings from './subuser-settings.vue'
+import UserAction from '@modules/CUserAction.js'
+import webSocket from '../js/webSocket.js'
+import Log from './log.vue'
+import type { IUser } from '@bot/types.d.ts'
+import { ref } from 'vue'
+
+const { user, lang } = defineProps<{ user: IUser, lang: { [key: string]: string | undefined } }>()
+const changeUserState = (state : boolean) => webSocket.send(JSON.stringify([UserAction.change, { id: user.id, state }]))
+const deleteUser = () => webSocket.send(JSON.stringify([UserAction.delete, user.id]))
+const serverName = ref("")
+
+import('../js/serverInstances.js').then(i => i.default)!.then(instances => {
+        let currentInstance = instances.find(i => i.value == user.serverid) ?? { name :"", serverInstance: "" }
+        serverName.value = `${lang?.[currentInstance.name] ?? currentInstance.name} ${currentInstance.serverInstance}`
+        return instances
+})
+
+</script>
+<template>
+        <div class="p-2 md:p-4 text-heading text-sm border border-default rounded-base shadow">
+                <div class="flex flex-row">
+                        <div class="p-2 grid grid-flow-col grid-rows-2 text-left">
+                                <dt class="mr-2 text-body">Name</dt>
+                                <dd class="mr-2 text-lg font-medium">{{ user.name }}</dd>
+                                <dt class="mr-2 text-body">Server</dt>
+                                <dd class="mr-2 text-lg font-medium">{{ serverName }}</dd>
+                        </div>
+                        <div class="ml-auto mb-auto mt-auto mr-1 whitespace-nowrap flex flex-row gap-2">
+                                        <Log :userID="user.id"/>
+                                        <SubUserSettings :user="user" :lang="lang"/>
+                                        <svg 
+                                                v-show="!user.state"
+                                                v-on:click="changeUserState(!user.state)"
+                                                class="w-5 h-5 hover:text-blue-600"
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                fill="none"
+                                                viewBox="3 0 10 16">
+                                                <path 
+                                                        stroke="currentColor"
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                        stroke-width="1"
+                                                        d="m2.707 14.293 5.586-5.586a1 1 0 0 0 0-1.414L2.707 1.707A1 1 0 0 0 1 2.414v11.172a1 1 0 0 0 1.707.707Z"/>
+                                        </svg>
+                                        <svg
+                                                v-show="user.state"
+                                                v-on:click="changeUserState(!user.state)"
+                                                class="w-5 h-5 hover:text-blue-600"
+                                                xmlns="http://www.w3.org/2000/svg" 
+                                                fill="none" 
+                                                viewBox="0 0 25 22"
+                                                >
+                                                <path 
+                                                        stroke="currentColor"
+                                                        stroke-linecap="round" 
+                                                        stroke-linejoin="round"
+                                                        stroke-width="1"
+                                                d="M12 0v22m-10 -22v22" />
+                                        </svg>
+                        </div>
+                </div>
+                <CastleView :user="user" />
+                <svg 
+                        v-on:click="deleteUser()"
+                        class="m-auto mr-2.5 md:mt-4 mt-2 w-5.5 h-5.5 hover:text-blue-600 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24">
+                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18 17.94 6M18 18 6.06 6" />
+                </svg>
+        </div>
+</template>

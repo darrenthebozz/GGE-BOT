@@ -4,12 +4,13 @@
     "bufferutil": "^4.1.0",
     "deep-freeze": "^0.0.1",
     "embedded-postgres": "^18.4.0-beta.17",
+    "esbuild": "^0.28.2",
     "express": "^5.3.0",
     "limiter": "^4.1.0",
     "npm-check-updates": "^23.1.1",
     "pureimage": "^0.4.20",
     "secure-json-parse": "^4.1.1",
-    "undici": "^8.11.2",
+    "undici": "^8.12.3",
     "ws": "^8.22.0",
     "xml2js": "^0.6.2"
   },
@@ -22,5 +23,9 @@
   "allowScripts": {
     "bufferutil@4.1.0": true,
     "@embedded-postgres/linux-x64@18.4.0-beta.17": true
+  },
+  "scripts": {
+    "start": "node ./dist/server/entry",
+    "build": "npm run astro build --prefix src/frontend && node build.mjs"
   }
 }

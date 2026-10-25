@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "rootDirs" : [
+      "./src",
+      "../modules",
+      "../plugins",
+      "../../bot"
+    ],
+    "plugins": [
+      {
+        "name": "@astrojs/ts-plugin"
+      }
+    ],
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "noImplicitAny": false,
+    "module": "preserve",
+    "target": "es2025",
+    "paths" : {
+      "@bot" : ["../bot"],
+      "@bot/*" : ["../*"],
+      "@modules/*" : ["../modules/*"],
+      "@plugins/*" : ["../plugins/*"],
+      "@frontend/*" : ["./*"]
+    }
+  },
+}
