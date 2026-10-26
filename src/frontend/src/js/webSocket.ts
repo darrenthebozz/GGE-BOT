@@ -1,3 +1,4 @@
 import ReconnectingWebsocket from "reconnecting-websocket"
-let debug = 8080
-export default new ReconnectingWebsocket(`//${window.location.hostname}:${debug ?? window.location.port}`, [], { WebSocket, minReconnectionDelay: 3000 })
+import ggeConfig from "@bot/ggeConfig.json"
+
+export default new ReconnectingWebsocket(ggeConfig.url, [], { WebSocket, minReconnectionDelay: 3000 })

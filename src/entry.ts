@@ -83,15 +83,15 @@ catch(e) {
     config = Object.assign(exampleConfig, { url : new URL(exampleConfig.url) })
 }
 
-console.debug = config.debug ? console.debug : () => { }
+console.debug = !isSea() ? console.debug : () => { }
 
 export const address = new URL(`ws://127.0.0.1:${config.url.port}`)
-console.log("creating db")
+
 const pg = new EmbeddedPostgres({
     databaseDir : join(workingPath, './db'),
     port: config.postgresPort,
     persistent: true,
-    onLog: config.postgresDebug ? console.debug : () => { }
+    onLog: !isSea() ? console.debug : () => { }
 })
 const itemsCacheExpire = 60 * 30 * 1000
 let databaseInitialised = false
