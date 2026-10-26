@@ -18,7 +18,52 @@ import exampleConfig from '@bot/ggeConfig.json' with { type: 'json' }
 //@ts-ignore
 import sqlInit from '@bot/init.sql' with { type: 'text' }
 import type { IUser, IBotConfig, ILog, IUserEvents } from '@bot/types.d.ts'
-import { setTimeout } from 'node:timers/promises'
+import { isSea } from 'node:sea'
+import { spawn } from 'node:child_process'
+import net from 'node:net'
+if (!isSea()) {
+    function waitForPort(port : number, host = 'localhost', timeout = 10000) {
+        return new Promise<void>((resolve, reject) => {
+            const startTime = Date.now()
+
+            function check() {
+                const socket = new net.Socket();
+
+                socket.connect(port, host, () => {
+                    socket.destroy()
+                    resolve()
+                })
+
+                socket.on('error', () => {
+                    socket.destroy()
+                    if (Date.now() - startTime > timeout)
+                        reject(new Error(`Timeout waiting for port ${port}`))
+                    else 
+                        setTimeout(check, 200)
+                })
+            }
+
+            check()
+        })
+    }
+    const child = spawn('npm', ['run', 'astro', 'build', '--prefix src/frontend'], {
+        stdio: 'inherit',
+        shell: false
+    })
+    child.on('close', process.exit)
+
+    function exitHandler() {
+        child.kill()
+    }
+
+    process.on('exit', exitHandler)
+    process.on('SIGINT', exitHandler)
+    process.on('SIGUSR1', exitHandler)
+    process.on('SIGUSR2', exitHandler)
+    process.on('uncaughtException', exitHandler)
+
+    await waitForPort(4321)
+}
 
 const workingPath = join(tmpdir(), 'ggeBot')
 const configPath = join(workingPath, "ggeConfig.json")
@@ -118,7 +163,11 @@ userEvents.on('sub_user_delete', payload => {
     Array.from(activeUsers[owneruuid]?.keys() ?? []).forEach(ws =>
         ws.send(JSON.stringify([UserAction.delete, Number(id)])))
 })
-const app = express().use('/', express.static('frontend/dist/client/')).use(ssrHandler)
+const app = express().use('/', express.static('frontend/dist/client/'))
+
+if (isSea())
+    app.use(ssrHandler)
+
 export const wss = new WebSocketServer({ noServer: true })
 wss.on('connection', async (ws, { headers }) => {
     const uuid = headers.cookie?.split('; ').find(e => e.startsWith('uuid='))?.substring(5, Infinity)

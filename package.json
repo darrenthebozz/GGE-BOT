@@ -25,6 +25,7 @@
   },
   "scripts": {
     "start": "ggebot.exe",
-    "build": "npm run astro build --prefix src/frontend && node build.mjs"
+    "build": "npm run astro build --prefix src/frontend && node build.mjs",
+    "dev": "set NODE_OPTIONS=\"--experimental-import-text\" && npx tsx .\\src\\entry.ts"
   }
 }
