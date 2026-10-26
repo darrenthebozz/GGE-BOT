@@ -1,9 +1,27 @@
 import * as esbuild from 'esbuild';
 import { spawn } from 'node:child_process';
-import { cp, rm } from 'node:fs/promises';
+import { cp, readdir, rm, writeFile } from 'node:fs/promises';
 import AdmZip from 'adm-zip';
-import seaConfig from './sea-config.json' with { type: 'json'};
-import path from 'path';
+import { join, normalize, basename } from 'node:path';
+
+const files = await readdir("./src/frontend/dist", { recursive : true, withFileTypes: true })
+const seaConfig = {
+  "main": "./dist/server/helper.js",
+  "mainFormat": "module",
+  "output": "./dist/server/ggebot",
+  "disableExperimentalSEAWarning": true,
+  "useSnapshot": false,
+  "useCodeCache": false,
+  "useVfs": true,
+  "assets": {
+    "dist/server/entry.js": "./dist/server/entry.js",
+    "dist/server/bot.js": "./dist/server/bot.js",
+    "node_modules.zip": "./dist/server/node_modules.zip",
+    ...Object.fromEntries(files.filter(f => !f.isDirectory())
+      .filter(f => f.name != "entry.mjs")
+      .map(file => [normalize(join('dist',file.parentPath.replace('src\\frontend\\dist',''), file.name)), normalize(join(file.parentPath, file.name))]))
+  }
+}
 
 async function runBuild() {
   await rm('./dist', { recursive: true, force: true });
@@ -31,8 +49,11 @@ async function runBuild() {
   });
 
   const zip = new AdmZip();
-  await zip.addLocalFolderPromise(path.join(import.meta.dirname, "./node_modules/@embedded-postgres"), { zipPath: "@embedded-postgres" });
-  zip.writeZip(path.join(import.meta.dirname, '/dist/server', 'node_modules.zip'));
+  await zip.addLocalFolderPromise(join(import.meta.dirname, "./node_modules/@embedded-postgres"), { zipPath: "@embedded-postgres" });
+  zip.writeZip(join(import.meta.dirname, '/dist/server', 'node_modules.zip'));
+
+  await writeFile("./sea-config.json", JSON.stringify(seaConfig))
+
   const child = spawn('node', ['--build-sea', 'sea-config.json'], {
     stdio: 'inherit',
     shell: false // Add this if running on Windows to safely find the node executable
@@ -42,7 +63,7 @@ async function runBuild() {
     throw new Error("Unexpected return code from NODE SEA.")
 
   if (process.platform === 'win32') {
-    await cp(seaConfig.output, `./${path.basename(seaConfig.output)}.exe`)
+    await cp(seaConfig.output, `./${basename(seaConfig.output)}.exe`)
   }
 
   console.log('Build complete!');
