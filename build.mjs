@@ -8,7 +8,7 @@ import path from 'path';
 async function runBuild() {
   await rm('./dist', { recursive: true, force: true });
   await esbuild.build({
-    entryPoints: ['./src/bot.js', './src/helper.js'],     // Your app's entry file
+    entryPoints: ['./src/bot.js', './src/helper.js', './src/entry.js'],     // Your app's entry file
     bundle: true,                      // Bundle all dependencies together
     platform: 'node',                  // Target the Node.js runtime environment
     format: 'esm',                     // Output standard ES modules ('cjs' for CommonJS)
@@ -18,6 +18,8 @@ async function runBuild() {
     external: [
       'node:sea',
       '@embedded-postgres', //sharp
+      './entry',
+      './dist/server/entry.js'
     ],
     banner: {
       js: "import { createRequire } from 'module'; const require = createRequire(import.meta.url);",

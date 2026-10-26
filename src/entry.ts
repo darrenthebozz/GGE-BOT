@@ -18,6 +18,7 @@ import exampleConfig from '@bot/ggeConfig.json' with { type: 'json' }
 //@ts-ignore
 import sqlInit from '@bot/init.sql' with { type: 'text' }
 import type { IUser, IBotConfig, ILog, IUserEvents } from '@bot/types.d.ts'
+import { setTimeout } from 'node:timers/promises'
 
 const workingPath = join(tmpdir(), 'ggeBot')
 const configPath = join(workingPath, "ggeConfig.json")
@@ -40,6 +41,7 @@ catch(e) {
 console.debug = config.debug ? console.debug : () => { }
 
 export const address = new URL(`ws://127.0.0.1:${config.url.port}`)
+console.log("creating db")
 const pg = new EmbeddedPostgres({
     databaseDir : join(workingPath, './db'),
     port: config.postgresPort,
@@ -55,6 +57,7 @@ let itemsLastUpdate = NaN
 console.log(workingPath)
 try { await pg.initialise(); databaseInitialised = true } catch (e) { console.debug(e) }
 await pg.start()
+
 
 export const client = await pg.getPgClient().connect()
 const userEvents = new EventEmitter<IUserEvents>()
