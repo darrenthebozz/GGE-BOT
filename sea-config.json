@@ -1,0 +1,13 @@
+{
+  "main": "./dist/server/helper.js",
+  "mainFormat": "module",
+  "output": "./dist/server/ggebot",
+  "disableExperimentalSEAWarning": true,
+  "useSnapshot": false,
+  "useCodeCache": false,
+  "useVfs": true,
+  "assets": {
+    "dist/server/bot.js": "./dist/server/bot.js",
+    "node_modules.zip": "./dist/server/node_modules.zip"
+  }
+}

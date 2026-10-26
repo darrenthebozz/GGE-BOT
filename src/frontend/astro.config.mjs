@@ -20,7 +20,7 @@ export default defineConfig({
       cssMinify : true
     },
     ssr : {
-      //  noExternal: true,
+       noExternal: true,
         // external:  ['cssesc', 'sharp']
     }
   },
@@ -31,5 +31,5 @@ export default defineConfig({
   cache: {
     provider: memoryCache(),
   },
-  prefetch: true,
+  prefetch: true
 })

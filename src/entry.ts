@@ -44,7 +44,7 @@ const pg = new EmbeddedPostgres({
     databaseDir : join(workingPath, './db'),
     port: config.postgresPort,
     persistent: true,
-    onLog: config.postgresDebug ? console.debug : () => { },
+    onLog: config.postgresDebug ? console.debug : () => { }
 })
 const itemsCacheExpire = 60 * 30 * 1000
 let databaseInitialised = false

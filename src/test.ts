@@ -11,7 +11,7 @@ import type { ILog, IUser } from '@bot/types'
 const workingPath = join(tmpdir(), 'ggeBot')
 await rm(workingPath, { recursive: true, force: true })
 
-const {address} = await import("@bot/entry.mjs")
+const {address} = await import("@bot/entry.js")
 
 console.log(`Address: http://${address.host}`)
 
