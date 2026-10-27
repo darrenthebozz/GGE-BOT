@@ -9,6 +9,7 @@
     "npm-check-updates": "^23.1.1",
     "pureimage": "^0.4.20",
     "secure-json-parse": "^4.1.1",
+    "tsx": "^4.23.15",
     "undici": "^8.12.3",
     "ws": "^8.22.0",
     "xml2js": "^0.6.2"
@@ -26,7 +27,7 @@
   "scripts": {
     "start": "ggebot.exe",
     "build": "npm run astro build --prefix src/frontend && node build.mjs",
-    "dev": "set NODE_OPTIONS=\"--experimental-import-text\" && npx tsx .\\src\\entry.ts",
-    "test": "set NODE_OPTIONS=\"--experimental-import-text\" && npx tsx .\\src\\test.ts"
+    "dev": ".\\node_modules\\.bin\\tsx --experimental-import-text --inspect .\\src\\entry.ts",
+    "test": ".\\node_modules\\.bin\\tsx --experimental-import-text --inspect .\\src\\test.ts"
   }
 }

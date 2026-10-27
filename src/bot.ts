@@ -22,14 +22,15 @@ export const restart = (...str: string[]) => {
     events.emit("unload")
     if (str.length > 0)
         console.error(...str)
-    ws.close()
-    client.end()
+    ws?.close()
+    client?.end()
 }
 export const close = async (...str: string[]) => {
     events.emit("unload")
     if (str.length > 0)
         console.error(...str)
-    ws.close()
+    ws?.close()
+    client?.end()
 }
 
 await client.query(`LISTEN sub_user_update; LISTEN sub_user_delete`)
