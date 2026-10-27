@@ -7,16 +7,16 @@ import EventEmitter from 'node:events'
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import type { ILog, IUser } from '@bot/types'
+import waitForPort from './modules/waitForPort'
 
 const workingPath = join(tmpdir(), 'ggeBot')
 await rm(workingPath, { recursive: true, force: true })
 
 const {address} = await import("@bot/entry.js")
-
-console.log(`Address: http://${address.host}`)
-
+await waitForPort(4321)
+console.log(address.hostname)
 const { uuid, status } = await new Promise(resolve => test("Creating account", { timeout: 10000 },
-    async () => resolve(await fetch(`http://${address.host}/signup`, {
+    async () => resolve(await fetch(`http://${address.hostname}:4321/signup`, {
         method: "POST",
         signal: AbortSignal.timeout(10000),
         body: JSON.stringify({ name: "test", password: "test" })

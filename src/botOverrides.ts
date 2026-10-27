@@ -5,6 +5,7 @@ import { basename } from "node:path"
 import { workerData } from "node:worker_threads"
 import client from '@modules/database'
 import type { IBotConfig } from '@bot/types.d.ts'
+import { isSea } from "node:sea"
 
 const { id, owneruuid } = workerData as IBotConfig
 
@@ -18,7 +19,7 @@ function mngLog(logLevel: "INFO" | "WARNING" | "ERROR" | "DEBUG", ...msg: Array<
 console.log = console.info = (...msg) => mngLog("INFO", msg)
 console.warn = (...msg) => mngLog("WARNING", msg)
 console.error = (...msg) => mngLog("ERROR", msg)
-console.debug = (...msg) => mngLog("DEBUG", msg)
+console.debug = !isSea() ? (...msg) => mngLog("DEBUG", msg) : (...msg) => {}
 
 const _setTimeout = setTimeout as any
 const setTimeoutOverride = (handler: TimerHandler, timeout?: number | undefined, ...args: any[]) =>

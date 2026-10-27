@@ -10,42 +10,19 @@ import express from 'express'
 import { safeParse } from 'secure-json-parse'
 //@ts-ignore
 import { handler as ssrHandler } from '@frontend/dist/server/entry.mjs'
-import IterableWeakMap from '@modules/IterableWeakMap.js'
-import UserAction from '@modules/CUserAction.js'
-import EventEmitter from '@modules/EventEmitter.js'
-import userDefaults from '@modules/userDefaults.js'
+import IterableWeakMap from '@modules/IterableWeakMap'
+import UserAction from '@modules/CUserAction'
+import EventEmitter from '@modules/EventEmitter'
+import userDefaults from '@modules/userDefaults'
+import waitForPort from '@modules/waitForPort'
 import exampleConfig from '@bot/ggeConfig.json' with { type: 'json' }
 //@ts-ignore
 import sqlInit from '@bot/init.sql' with { type: 'text' }
 import type { IUser, IBotConfig, ILog, IUserEvents } from '@bot/types.d.ts'
 import { isSea } from 'node:sea'
 import { spawn } from 'node:child_process'
-import net from 'node:net'
+
 if (!isSea()) {
-    function waitForPort(port : number, host = 'localhost', timeout = 10000) {
-        return new Promise<void>((resolve, reject) => {
-            const startTime = Date.now()
-
-            function check() {
-                const socket = new net.Socket();
-
-                socket.connect(port, host, () => {
-                    socket.destroy()
-                    resolve()
-                })
-
-                socket.on('error', () => {
-                    socket.destroy()
-                    if (Date.now() - startTime > timeout)
-                        reject(new Error(`Timeout waiting for port ${port}`))
-                    else 
-                        setTimeout(check, 200)
-                })
-            }
-
-            check()
-        })
-    }
     const child = spawn('npm', ['run', 'astro', 'build', '--prefix src/frontend'], {
         stdio: 'inherit',
         shell: false
@@ -85,7 +62,7 @@ catch(e) {
 
 console.debug = !isSea() ? console.debug : () => { }
 
-export const address = new URL(`ws://127.0.0.1:${config.url.port}`)
+export const address = new URL(`ws://${config.url.hostname}:${config.url.port}`)
 
 const pg = new EmbeddedPostgres({
     databaseDir : join(workingPath, './db'),
@@ -188,12 +165,16 @@ wss.on('connection', async (ws, { headers }) => {
             case UserAction.change:
                 if (!obj.id) {
                     const userChanges = Object.create({ ...structuredClone(userDefaults), ...obj }) as IUser
-                    userChanges.plugins = Object.create({ ...structuredClone(userDefaults.plugins), ...userChanges.plugins })
                     client.query('INSERT INTO sub_users(name, loginToken, plugins, serverType, serverID, owneruuid) VALUES($2,$3,$4,$5,$6,$1)',
-                        [uuid, userChanges.name, userChanges.logintoken, {}, userChanges.servertype, userChanges.serverid])
+                        [uuid, userChanges.name, userChanges.logintoken, obj.plugins, userChanges.servertype, userChanges.serverid])
                     break
                 }
+                if (obj.plugins) {
+                    const previousPlugins = (await client.query('Select name, plugins, state, serverType, serverID, id from sub_users WHERE owneruuid=$1 AND id=$2', [uuid, obj.id])
+                        .then((a: any) => a.rows[0]?.plugins ?? {}))
 
+                    Object.assign(obj.plugins, previousPlugins)
+                }
                 let i = 3
                 client.query("UPDATE sub_users SET " + (
                     (obj.loginToken ? `loginToken=$${i++},` : '') +

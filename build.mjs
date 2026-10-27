@@ -13,6 +13,7 @@ const seaConfig = {
   "useSnapshot": false,
   "useCodeCache": false,
   "useVfs": true,
+  "execArgvExtension" : "none",
   "assets": {
     "dist/server/entry.js": "./dist/server/entry.js",
     "dist/server/bot.js": "./dist/server/bot.js",
@@ -44,7 +45,9 @@ async function runBuild() {
     }, alias: {
       '@embedded-postgres/windows-x64': './src/embedded-postgres-bridge/windows-x64'
     },
-    packages: 'bundle'
+    packages: 'bundle',
+    target : "es2025",
+    mangleProps: /^_/, 
   })
 
   const zip = new AdmZip()
