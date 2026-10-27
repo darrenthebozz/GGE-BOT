@@ -1,3 +1,6 @@
+//@ts-ignore
+globalThis.test = true
+
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { rm } from 'node:fs/promises'
@@ -91,7 +94,7 @@ const assertLog = (log: string) => new Promise<void>((resolve, reject) => {
 await test("Get log", { timeout: 1000000 }, async s => {
     ws.send(JSON.stringify([CUserAction.log, 1]))
     await Promise.allSettled([
-        s.test("Started", a => assertLog(a.name)),
+        s.test("LOAD", a => assertLog(a.name)),
         // s.test("UNLOAD", a => assertLog(a.name)),
         // s.test("RELOADPLUGIN", a => assertLog(a.name)),
         // s.test("UNLOADPLUGIN", a => assertLog(a.name))

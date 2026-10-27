@@ -34,6 +34,7 @@ export interface IBotConfig {
     id: number
     owneruuid: string
     workingPath: string
+    isTest : boolean
 }
 export interface IInstance {
       value: number

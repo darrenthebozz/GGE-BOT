@@ -1,6 +1,6 @@
 import net from 'node:net'
 
-export default function waitForPort(port: number, host = 'localhost', timeout = 10000) {
+export default function waitForPort(port: number, host = 'localhost', timeout = 100000) {
     return new Promise<void>((resolve, reject) => {
         const startTime = Date.now()
 

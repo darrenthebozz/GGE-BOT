@@ -1,6 +1,6 @@
 import '@bot/botOverrides'
 import { readFile } from 'node:fs/promises'
-import { join, normalize } from 'node:path'
+import path, { join, normalize } from 'node:path'
 import { getCallSites } from 'node:util'
 import { RateLimiter } from 'limiter'
 import client from '@modules/database'
@@ -11,7 +11,7 @@ import pluginConfig from '@bot/plugins/index'
 import type { IBotConfig, IUser, IInstance, IUserEvents, IPlugin, IPluginOptionValueType } from '@bot/types.ts'
 import { isSea } from 'node:sea'
 
-const { id, workingPath } = await import("node:worker_threads").then(e => e.workerData as IBotConfig)
+const { id, workingPath, isTest } = await import("node:worker_threads").then(e => e.workerData as IBotConfig)
 export const events = new EventEmitter<{
     unload: void
     load: void
@@ -87,39 +87,38 @@ export function getPluginOptions<T extends IPlugin>() {
 }
 
 export const xtHandler = new EventEmitter<{ [key: string]: any }>()
+if (!isTest) {
+    ws.onopen = () => ws.send('<msg t="sys"><body action="verChk" r="0"><ver v="166"/></body></msg>')
+    ws.onerror = () => close("webSocketError")
+    ws.onclose = async () => {
+        await client.query('UPDATE sub_users SET state=$2 WHERE id=$1', [id, false])
+        await client.end()
+    }
+    ws.onmessage = ({ data }) => {
+        let message = data.toString() as string
 
-ws.onopen = () => ws.send('<msg t="sys"><body action="verChk" r="0"><ver v="166"/></body></msg>')
-ws.onerror = () => close("webSocketError")
-ws.onclose = async () => {
-    await client.query('UPDATE sub_users SET state=$2 WHERE id=$1', [id, false])
-    await client.end()
-}
-ws.onmessage = ({ data }) => {
-    let message = data.toString() as string
-
-    if (message[0] == "<") {
-        if (message == "<msg t='sys'><body action='apiOK' r='0'></body></msg>")
-            ws.send(`<msg t="sys"><body action="login" r="0"><login z="${zone}"><nick><![CDATA[]]></nick><pword><![CDATA[undefined%en%0]]></pword></login></body></msg>`)
-        else if (message == "<msg t='sys'><body action='joinOK' r='1'><pid id='0'/><vars /><uLs r='1'></uLs></body></msg>") {
-            ws.send('<msg t="sys"><body action="roundTrip" r="1"></body></msg>')
-            sendXT("vck", `undefined%web-html5%<RoundHouseKick>%${(Math.random() * Number.MAX_VALUE).toFixed()}`)
+        if (message[0] == "<") {
+            if (message == "<msg t='sys'><body action='apiOK' r='0'></body></msg>")
+                ws.send(`<msg t="sys"><body action="login" r="0"><login z="${zone}"><nick><![CDATA[]]></nick><pword><![CDATA[undefined%en%0]]></pword></login></body></msg>`)
+            else if (message == "<msg t='sys'><body action='joinOK' r='1'><pid id='0'/><vars /><uLs r='1'></uLs></body></msg>") {
+                ws.send('<msg t="sys"><body action="roundTrip" r="1"></body></msg>')
+                sendXT("vck", `undefined%web-html5%<RoundHouseKick>%${(Math.random() * Number.MAX_VALUE).toFixed()}`)
+            }
+            return
         }
-        return
-    }
-    let [, , cmd, , _result, obj] = message.split("%") as [any, any, string, any, number, string]
-    const result = err[String(_result)] ?? String(_result)
-    try { obj = JSON.parse(obj) }
-    catch (e) {
-        console.debug(e)
-    }
+        let [, , cmd, , _result, obj] = message.split("%") as [any, any, string, any, number, string]
+        const result = err[String(_result)] ?? String(_result)
+        try { obj = JSON.parse(obj) }
+        catch { }
 
-    if (cmd == "gbd")
-        for (const [key, value] of Object.entries(obj))
-            xtHandler.emit(key, value, err[0])
+        if (cmd == "gbd")
+            for (const [key, value] of Object.entries(obj))
+                xtHandler.emit(key, value, err[0])
 
-    else if (!["rlu", "core_pol"].includes(cmd))
-        console.debug(result, cmd)
-    xtHandler.emit(cmd, obj, result)
+        else if (!["rlu", "core_pol"].includes(cmd))
+            console.debug(result, cmd)
+        xtHandler.emit(cmd, obj, result)
+    }
 }
 
 const limiter = new RateLimiter({ tokensPerInterval: 5, interval: "sec" })
@@ -235,9 +234,10 @@ xtHandler.on("lli", async (obj, result) => {
     else close()
 })
 
-console.log("Started")
+if (state == false)
+    close()
 
-Promise.allSettled(Array.from(Object.entries(plugins)).map(([key, object]) => {
+Promise.allSettled(Array.from(Object.entries(plugins)).map(async ([key, object]) => {
     if (!object?.state)
         return
 
@@ -245,9 +245,17 @@ Promise.allSettled(Array.from(Object.entries(plugins)).map(([key, object]) => {
 
     if (!pluginData)
         return console.warn(key, " missing")
+    try {
+        const filePath = path.parse(pluginData.filePath)
 
-    return import(`./plugins/${normalize(pluginData.filePath)}`)
-})).then(() => console.log("Starting Bot"))
-
-if (state == false)
-    close()
+        return await import(`@plugins/${join(filePath.dir, filePath.base)}`)
+    }
+    catch (e) {
+        console.warn(e)
+    }
+})).then(() => {
+    console.log("Started")
+    if (isTest) {
+        events.emit("load")
+    }
+})

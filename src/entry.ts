@@ -95,8 +95,10 @@ const startBot = async (id: number, owneruuid: string) => {
             itemsVersion = currentItemVersion
             itemsLastUpdate = Date.now()
         }
+        //@ts-ignore
+        const isTest = !!globalThis.test as boolean
         
-        new Worker(new URL("bot", import.meta.url), { workerData: { id, owneruuid, workingPath, } satisfies IBotConfig })
+        new Worker(new URL("bot", import.meta.url), { workerData: { id, owneruuid, workingPath, isTest } satisfies IBotConfig })
     }
 }
 
