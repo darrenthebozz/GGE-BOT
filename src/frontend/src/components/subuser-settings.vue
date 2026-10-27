@@ -9,19 +9,22 @@ import {
     FwbToggle,
     FwbTooltip,
     FwbInput,
-    FwbModal
+    FwbModal,
+    FwbAlert
 } from 'flowbite-vue'
+import VueCountdown from '@chenfengyuan/vue-countdown'
 import createUserObject from '@modules/createUserObject.js'
 import UserAction from '@modules/CUserAction.js'
 import plugins from '@plugins/index'
 import type { IUser, IPlugin } from '@bot/types.ts'
+import type { TLog } from '../js/validateUser'
 import validateUser from '../js/validateUser'
 import instances from "../js/serverInstances"
 import ws from '../js/webSocket'
 
 const { user: _user, lang } = defineProps<Partial<{ user: IUser, lang: { [key: string]: string | undefined } }>>()
 const isShowModal = ref(false)
-const log = ref({})
+const log = ref({} as Partial<TLog>)
 const password = ref('')
 const closeModal = () => isShowModal.value = false
 const showModal = () => isShowModal.value = true
@@ -127,7 +130,21 @@ function submitForm() {
                         </fwb-accordion-panel>
                     </fwb-accordion>
                 </div>
-                <button class="m-2 text-white bg-neutral-secondary-medium box-border border border-transparent hover:bg-blue-600 focus:ring-4 focus:ring-brand-medium shadow-xs font-medium leading-5 rounded-base text-sm px-4 py-2.5 focus:outline-none">Save</button>
+                <div class="flex flex-row w-full">
+                    <fwb-alert class="text-left flex-1 m-1" v-if="log.type == 'ERROR'" type="danger">
+                        {{ log.value }}
+                    </fwb-alert>
+                    <fwb-alert class="text-left flex-1 m-1" v-else-if="log.type == 'TIMEOUT'" type="warning">
+                        <vue-countdown :time="log.value! * 1000" v-slot="{ minutes, seconds }">
+                            Waiting {{ minutes }} minutes, {{ seconds }} seconds before continuing
+                        </vue-countdown>
+                    </fwb-alert>
+                    <fwb-alert class="text-left flex-1 m-1" v-else type="info">
+                        {{ log.value ?? "" }}
+                    </fwb-alert>
+                    <button
+                        class="m-1 text-white bg-neutral-secondary-medium box-border border border-transparent hover:bg-blue-600 focus:ring-4 focus:ring-brand-medium shadow-xs font-medium leading-5 rounded-base text-sm px-4 py-2.5 focus:outline-none">Save</button>
+                </div>
             </form>
         </template>
     </fwb-modal>

@@ -20,7 +20,7 @@ export default defineConfig({
       cssMinify : true
     },
     ssr : {
-       noExternal: true,
+      //  noExternal: true,
         // external:  ['cssesc', 'sharp']
     }
   },

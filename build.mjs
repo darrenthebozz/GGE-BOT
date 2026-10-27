@@ -33,7 +33,7 @@ async function runBuild() {
     format: 'esm',
     outdir: 'dist/server/',
     sourcemap: false,
-    minify: true,
+    minify: false,
     external: [
       'node:sea',
       '@embedded-postgres', //sharp
@@ -41,13 +41,12 @@ async function runBuild() {
       './dist/server/entry.js'
     ],
     banner: {
-      js: "import { createRequire } from 'module'; const require = createRequire(import.meta.url);",
+      js: "var require = (await import('module')).createRequire(import.meta.url);",
     }, alias: {
       '@embedded-postgres/windows-x64': './src/embedded-postgres-bridge/windows-x64'
     },
     packages: 'bundle',
-    target : "es2025",
-    mangleProps: /^_/, 
+    target : "es2025"
   })
 
   const zip = new AdmZip()

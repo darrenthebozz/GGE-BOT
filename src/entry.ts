@@ -8,8 +8,7 @@ import EmbeddedPostgres from 'embedded-postgres'
 import { WebSocketServer, WebSocket } from 'ws'
 import express from 'express'
 import { safeParse } from 'secure-json-parse'
-//@ts-ignore
-import { handler as ssrHandler } from '@frontend/dist/server/entry.mjs'
+
 import IterableWeakMap from '@modules/IterableWeakMap'
 import UserAction from '@modules/CUserAction'
 import EventEmitter from '@modules/EventEmitter'
@@ -23,9 +22,9 @@ import { isSea } from 'node:sea'
 import { spawn } from 'node:child_process'
 
 if (!isSea()) {
-    const child = spawn('npm', ['run', 'astro', 'build', '--prefix src/frontend'], {
+    const child = spawn('npm', ['run', 'astro', 'dev', '--prefix', 'src/frontend'], {
         stdio: 'inherit',
-        shell: false
+        shell: true
     })
     child.on('close', process.exit)
 
@@ -35,9 +34,6 @@ if (!isSea()) {
 
     process.on('exit', exitHandler)
     process.on('SIGINT', exitHandler)
-    process.on('SIGUSR1', exitHandler)
-    process.on('SIGUSR2', exitHandler)
-    process.on('uncaughtException', exitHandler)
 
     await waitForPort(4321)
 }
@@ -142,8 +138,10 @@ userEvents.on('sub_user_delete', payload => {
 })
 const app = express().use('/', express.static('frontend/dist/client/'))
 
-if (isSea())
-    app.use(ssrHandler)
+if (isSea()) {
+    // @ts-ignore
+    app.use(await import('@frontend/dist/server/entry.mjs').then(o => o.handler))
+}
 
 export const wss = new WebSocketServer({ noServer: true })
 wss.on('connection', async (ws, { headers }) => {

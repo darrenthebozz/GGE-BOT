@@ -88,7 +88,7 @@ export default function login(username: string, password: string, gameServer: st
         }, 1000 * 60)
     }, { once: true})
     xtHandler.addEventListener("lli", ({ detail: { obj, r } }: CustomEventInit<any>) => {
-        switch(r) {
+        switch(Number(r)) {
             case 453:
             setTimeout(retry, obj.CD * 1000)
             events.dispatchEvent(new CustomEvent("TIMEOUT", { detail: obj.CD }))
@@ -97,10 +97,11 @@ export default function login(username: string, password: string, gameServer: st
             setTimeout(retry, obj.RS * 1000)
             events.dispatchEvent(new CustomEvent("TIMEOUT", { detail: obj.RS }))
             break
+            case 0:
+                break
             default:
             events.dispatchEvent(new CustomEvent("ERROR", { detail: { obj, r } }))
             ws.close(3000, "An error has occurred")
-            case 0:
         }
     })
 
