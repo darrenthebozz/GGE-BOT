@@ -9,27 +9,38 @@ import createUserObject from '@modules/createUserObject'
 import exampleConfig from '@bot/ggeConfig.json' with { type: 'json' }
 import pluginConfig from '@bot/plugins/index'
 import type { IBotConfig, IUser, IInstance, IUserEvents, IPlugin, IPluginOptionValueType } from '@bot/types.ts'
+import { isSea } from 'node:sea'
 
 const { id, workingPath } = await import("node:worker_threads").then(e => e.workerData as IBotConfig)
 export const events = new EventEmitter<{
-    unload : void
-    load : void
-    reloadPlugin : string
-    unloadPlugin : string
+    unload: void
+    load: void
+    reloadPlugin: string
+    unloadPlugin: string
 }>()
 const userEvents = new EventEmitter<IUserEvents>()
 export const restart = (...str: string[]) => {
     events.emit("unload")
     if (str.length > 0)
         console.error(...str)
-    ws?.close()
+    try {
+        ws?.close()
+    }
+    catch (e) {
+        console.debug(e)
+    }
     client?.end()
 }
 export const close = async (...str: string[]) => {
     events.emit("unload")
     if (str.length > 0)
         console.error(...str)
-    ws?.close()
+    try {
+        ws?.close()
+    }
+    catch (e) {
+        console.debug(e)
+    }
     client?.end()
 }
 
@@ -45,7 +56,7 @@ userEvents.on('sub_user_update', payload => {
     if (userChanges.plugins) {
         // debugger
     }
-    if(userChanges.state == false)
+    if (userChanges.state == false)
         close()
 
 })
@@ -57,9 +68,9 @@ const err = await import('@bot/err.json', { with: { type: "json" } }).then(e =>
 const configPath = join(workingPath, "ggeConfig.json")
 export const config = await readFile(configPath, 'utf-8').then(str => {
     const config = Object.assign(JSON.parse(str) as Partial<typeof exampleConfig>, exampleConfig)
-    return Object.assign({ url : new URL(config.url)}, config)
+    return Object.assign(config, { url: new URL(config.url) })
 })
-const instances = await fetch(config.url.toString() + "/server").then(a => a.json()) as IInstance[]
+const instances = await fetch(`http://${config.url.hostname}:${isSea() ? config.url.port : 4321}/server`).then(a => a.json()) as IInstance[]
 const { name, plugins, servertype, serverid, logintoken, state } =
     (await client.query('SELECT name, plugins, serverType, serverID, loginToken, state FROM sub_users WHERE id=$1', [id])
         .then(e => createUserObject(e.rows[0])))
@@ -68,14 +79,14 @@ const ws = new WebSocket(`wss://${server}`)
 
 export function getPluginOptions<T extends IPlugin>() {
     const pluginKey = getCallSites(6)[2]?.scriptName
-    if(!pluginKey)
+    if (!pluginKey)
         throw new Error("Missing plugin key")
 
     const plugin = plugins[pluginKey]!
     return plugin as Omit<typeof plugin, "state"> as IPluginOptionValueType<T>
 }
 
-export const xtHandler = new EventEmitter<{ [key : string] : any}>()
+export const xtHandler = new EventEmitter<{ [key: string]: any }>()
 
 ws.onopen = () => ws.send('<msg t="sys"><body action="verChk" r="0"><ver v="166"/></body></msg>')
 ws.onerror = () => close("webSocketError")
@@ -98,7 +109,9 @@ ws.onmessage = ({ data }) => {
     let [, , cmd, , _result, obj] = message.split("%") as [any, any, string, any, number, string]
     const result = err[String(_result)] ?? String(_result)
     try { obj = JSON.parse(obj) }
-    catch (e) { console.debug(e) }
+    catch (e) {
+        console.debug(e)
+    }
 
     if (cmd == "gbd")
         for (const [key, value] of Object.entries(obj))
@@ -222,17 +235,19 @@ xtHandler.on("lli", async (obj, result) => {
     else close()
 })
 
+console.log("Started")
+
 Promise.allSettled(Array.from(Object.entries(plugins)).map(([key, object]) => {
-    if(!object?.state)
+    if (!object?.state)
         return
 
     const pluginData = pluginConfig.find(e => e.key == key)
 
-    if(!pluginData)
-        return console.warn(key, " missing") 
-    
+    if (!pluginData)
+        return console.warn(key, " missing")
+
     return import(`./plugins/${normalize(pluginData.filePath)}`)
 })).then(() => console.log("Starting Bot"))
 
-if(state == false)
+if (state == false)
     close()

@@ -188,7 +188,8 @@ wss.on('connection', async (ws, { headers }) => {
             case UserAction.log:
                 if (activeUser.logSubuserID = Number(obj))
                     ws.send(JSON.stringify([UserAction.log,
-                    ...(await client.query('SELECT json_agg(logs) AS logs FROM sub_users WHERE owneruuid=$1 AND id=$2', [uuid, activeUser.logSubuserID]).then(e => e.rows?.[0]?.logs ?? []))]))
+                    ...(await client.query('SELECT json_agg(logs) AS logs FROM sub_users WHERE owneruuid=$1 AND id=$2', [uuid, activeUser.logSubuserID])
+                        .then(e => e.rows?.[0]?.logs.filter((e : any) => e != null) ?? []))]))
                 break
         }
     })

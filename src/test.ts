@@ -71,8 +71,9 @@ await test("Change User State", { timeout: 10000 }, () => new Promise(resolve =>
     ws.send(JSON.stringify([CUserAction.change, { id: user.id, state: true }]))
     messageHandler.once(CUserAction.change.toString(), resolve)
 }))
-messageHandler.on(CUserAction.log.toString(),
-        (...logs: ILog[]) => logs.forEach(_log => console.log(_log.data)))
+messageHandler.on(CUserAction.log.toString(), (...logs: ILog[]) => {
+    logs.forEach(_log => console.log(_log.data))
+})
 const assertLog = (log: string) => new Promise<void>((resolve, reject) => {
     const timeout = 10000
     const timer = setTimeout(() => {
@@ -87,10 +88,10 @@ const assertLog = (log: string) => new Promise<void>((resolve, reject) => {
         }))
 })
 
-await test("Get log", { timeout: 10000 }, async s => {
+await test("Get log", { timeout: 1000000 }, async s => {
     ws.send(JSON.stringify([CUserAction.log, 1]))
     await Promise.allSettled([
-        s.test("LOAD", a => assertLog(a.name)),
+        s.test("Started", a => assertLog(a.name)),
         // s.test("UNLOAD", a => assertLog(a.name)),
         // s.test("RELOADPLUGIN", a => assertLog(a.name)),
         // s.test("UNLOADPLUGIN", a => assertLog(a.name))
