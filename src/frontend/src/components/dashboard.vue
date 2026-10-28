@@ -23,7 +23,6 @@ ws.addEventListener("message", ({ data }: any) => {
     case UserAction.get:
       users.value = obj.map((obj1) => {
         const newUser = createUserObject(obj1)
-        console.log(newUser.plugins.test0.state)
         return newUser
     })
       break

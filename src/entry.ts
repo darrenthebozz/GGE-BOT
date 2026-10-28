@@ -95,11 +95,12 @@ const startBot = async (id: number, owneruuid: string) => {
             itemsVersion = currentItemVersion
             itemsLastUpdate = Date.now()
         }
-        //@ts-ignore
-        const isTest = !!globalThis.test as boolean
-        
-        new Worker(new URL("bot", import.meta.url), { workerData: { id, owneruuid, workingPath, isTest } satisfies IBotConfig })
     }
+
+    //@ts-ignore
+    const isTest = !!globalThis.test as boolean
+    const botPath = isSea() ? "./dist/server/bot" : "./bot"
+    new Worker(botPath, { workerData: { id, owneruuid, workingPath, isTest } satisfies IBotConfig })
 }
 
 if (databaseInitialised)

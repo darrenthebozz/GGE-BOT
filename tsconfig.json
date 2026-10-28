@@ -6,7 +6,6 @@
     "outDir": "./dist",
     // Environment Settings
     // See also https://aka.ms/tsconfig/module
-    
     "module": "preserve",
     "target": "esnext",
     "types": [],
@@ -14,18 +13,15 @@
     // "lib": ["esnext"],
     // "types": ["node"],
     // and npm install -D @types/node
-
     // Other Outputs
     "sourceMap": false,
     "declaration": false,
     "declarationMap": false,
     // "allowImportingTsExtensions" : true,
     // "noEmit": true,
-
     // Stricter Typechecking Options
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
-
     // Style Options
     // "noImplicitReturns": true,
     // "noImplicitOverride": true,
@@ -33,7 +29,6 @@
     // "noUnusedParameters": true,
     // "noFallthroughCasesInSwitch": true,
     // "noPropertyAccessFromIndexSignature": true,
-
     // Recommended Options
     "strict": true,
     "verbatimModuleSyntax": true,
@@ -41,12 +36,25 @@
     "noUncheckedSideEffectImports": true,
     "moduleDetection": "force",
     // "skipLibCheck": true,
-    "paths" : {
-      "@bot" : ["./src/bot"],
-      "@bot/*" : ["./src/*"],
-      "@modules/*" : ["./src/modules/*"],
-      "@plugins/*" : ["./src/plugins/*"],
-      "@frontend/*" : ["./src/frontend/*"] 
+    "paths": {
+      "@bot": [
+        "./src/bot"
+      ],
+      "@bot/*": [
+        "./src/*"
+      ],
+      "@modules/*": [
+        "./src/modules/*"
+      ],
+      "@plugins/*": [
+        "./src/plugins/*"
+      ],
+      "@frontend/*": [
+        "./src/frontend/*"
+      ],
+      "@items/*": [
+        "./src/items/*"
+      ]
     }
   }
 }

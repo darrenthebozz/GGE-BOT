@@ -94,8 +94,8 @@ if (!isTest) {
         await client.query('UPDATE sub_users SET state=$2 WHERE id=$1', [id, false])
         await client.end()
     }
-    ws.onmessage = ({ data }) => {
-        let message = data.toString() as string
+    ws.onmessage = async ({ data }) => {
+        let message = await data.text()
 
         if (message[0] == "<") {
             if (message == "<msg t='sys'><body action='apiOK' r='0'></body></msg>")
@@ -115,16 +115,17 @@ if (!isTest) {
             for (const [key, value] of Object.entries(obj))
                 xtHandler.emit(key, value, err[0])
 
-        else if (!["rlu", "core_pol"].includes(cmd))
-            console.debug(result, cmd)
+        else if (result != 'ALL_OK' && !['rlu', 'core_pol', 'vck', 'gfl', 'lli'].includes(cmd))
+            console.debug(cmd, result)
         xtHandler.emit(cmd, obj, result)
     }
 }
 
 const limiter = new RateLimiter({ tokensPerInterval: 5, interval: "sec" })
-export const sendXT = (cmdName: string, paramObj: object | String) => limiter.removeTokens(1).then(() =>
-    ws.send(
-        `%xt%${zone}%${cmdName}%1%${paramObj instanceof String ? paramObj : JSON.stringify(paramObj)}%`))
+export const sendXT = (cmdName: string, paramObj: object | String) => limiter.removeTokens(1).then(() => {
+    const msg = `%xt%${zone}%${cmdName}%1%${paramObj instanceof String ? paramObj : JSON.stringify(paramObj)}%`
+    ws.send(msg)
+})
 
 let maxTimeouts = 8
 let importantErrors = 0
@@ -180,9 +181,9 @@ function retry() {
         //TODO:
         client.query('SELECT name, plugins, serverType, serverID, loginToken FROM sub_users WHERE id=$1', [id])
 
-        return sendXT("tlep", JSON.stringify({ TLT: logintoken }))
+        return sendXT("tlep", { TLT: logintoken })
     }
-    sendXT("lli", JSON.stringify({
+    sendXT("lli", {
         "CONM": 350,
         "RTM": 57,
         "ID": 0,
@@ -197,7 +198,7 @@ function retry() {
         "GCI": "",
         "SID": 9,
         "PLFID": 1
-    }))
+    })
 }
 
 xtHandler.on("rlu", () => ws.send('<msg t="sys"><body action="autoJoin" r="-1"></body></msg>'))
@@ -226,7 +227,7 @@ xtHandler.on("lli", async (obj, result) => {
             setTimeout(events.emit, 4500, "load")
             clearTimeout(timer)
         })
-        return setInterval(sendXT, 1000 * 60, "pin", "<RoundHouseKick>").unref()
+        return setInterval(sendXT, 1000 * 60, "pin", "<RoundHouseKick>")
     }
 
     if (result == "INVALID_LOGIN_TOKEN" && loginAttempts++ < 30)
@@ -248,7 +249,7 @@ Promise.allSettled(Array.from(Object.entries(plugins)).map(async ([key, object])
     try {
         const filePath = path.parse(pluginData.filePath)
 
-        return await import(`@plugins/${join(filePath.dir, filePath.base)}`)
+        return await import(`./plugins/${join(filePath.dir, filePath.base)}`)
     }
     catch (e) {
         console.warn(e)

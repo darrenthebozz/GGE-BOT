@@ -26,8 +26,11 @@
   },
   "scripts": {
     "start": "ggebot.exe",
+    "prebuild": "sudo .\\node_modules\\.bin\\tsx --experimental-import-text .\\init.js",
     "build": "npm run astro build --prefix src/frontend && node build.mjs",
-    "dev": ".\\node_modules\\.bin\\tsx --experimental-import-text --inspect .\\src\\entry.ts",
-    "test": ".\\node_modules\\.bin\\tsx --experimental-import-text --inspect .\\src\\test.ts"
+    "predev": "sudo .\\node_modules\\.bin\\tsx --experimental-import-text .\\init.js",
+    "dev": ".\\node_modules\\.bin\\tsx --experimental-import-text .\\src\\entry.ts",
+    "pretest": "sudo .\\node_modules\\.bin\\tsx --experimental-import-text .\\init.js",
+    "test": ".\\node_modules\\.bin\\tsx --experimental-import-text .\\src\\test.ts"
   }
 }

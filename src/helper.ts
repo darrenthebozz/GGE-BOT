@@ -1,16 +1,15 @@
-import AdmZip from 'adm-zip';
-import { readFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import path, { join } from 'node:path';
-import { isSea } from 'node:sea';
+import AdmZip from 'adm-zip'
+import { readFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import path, { join } from 'node:path'
+import { isSea } from 'node:sea'
 
 const workingPath = join(tmpdir(), 'ggeBot')
-
 
 if(isSea()) {
     const zip = new AdmZip(await readFile(path.join(import.meta.dirname, 'node_modules.zip')))
     try {
-        var pgPackage = await readFile(join(workingPath, "node_modules", "@embedded-postgres", "windows-x64", 'package.json'), { encoding : 'utf-8'}).then(JSON.parse)
+        var pgPackage = await readFile(join(workingPath, "node_modules", "@embedded-postgres", "windows-x64", 'package.json'), { encoding : 'utf-8' }).then(JSON.parse)
     }
     catch(e) {
         console.warn(e)

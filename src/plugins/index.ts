@@ -10,4 +10,5 @@ export const Test = {
     }
 } satisfies IPlugin
 
+
 export default [Test] as IPlugin[]
