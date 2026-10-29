@@ -7,21 +7,21 @@ import vue from '@astrojs/vue'
 
 // https://astro.build/config
 export default defineConfig({
-  security : {
-    checkOrigin : false
+  security: {
+    checkOrigin: false
   },
   output: 'server',
   vite: {
     plugins: [
       tailwindcss()
     ],
-    build : {
+    build: {
       cssCodeSplit: false,
-      cssMinify : true
+      cssMinify: true,
     },
-    ssr : {
-      //  noExternal: true,
-        // external:  ['cssesc', 'sharp']
+    ssr: {
+      // noExternal: true,
+      // external:  ['cssesc', 'sharp']
     }
   },
   integrations: [vue()],

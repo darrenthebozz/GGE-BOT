@@ -99,8 +99,9 @@ const startBot = async (id: number, owneruuid: string) => {
 
     //@ts-ignore
     const isTest = !!globalThis.test as boolean
-    const botPath = isSea() ? "./dist/server/bot" : "./bot"
-    new Worker(botPath, { workerData: { id, owneruuid, workingPath, isTest } satisfies IBotConfig })
+    
+    const botPath = isSea() ? "./dist/server/bot" : join(import.meta.dirname, 'bot')
+    new Worker(botPath, { name: "GGEBotWorker", workerData: { id, owneruuid, workingPath, isTest } satisfies IBotConfig })
 }
 
 if (databaseInitialised)
@@ -176,12 +177,9 @@ wss.on('connection', async (ws, { headers }) => {
 
                     Object.assign(obj.plugins, previousPlugins)
                 }
-                let i = 3
-                client.query("UPDATE sub_users SET " + (
-                    (obj.loginToken ? `loginToken=$${i++},` : '') +
-                    (obj.plugins ? `plugins=$${i++},` : '') +
-                    (obj.state != undefined ? `state=$${i++},` : '')
-                ).replace(/\,$/, '') + " WHERE owneruuid=$1 AND id=$2", [uuid, ...Object.values(obj)])
+                const user = Object.assign(await client.query('SELECT name, plugins, serverType, serverID, loginToken, state FROM sub_users WHERE owneruuid=$1 AND id=$2', [uuid, obj.id]).then(e => e.rows[0]), obj) as IUser
+                client.query("UPDATE sub_users SET name=$3, plugins=$4, serverType=$5, serverID=$6, loginToken=$7, state=$8 WHERE owneruuid=$1 AND id=$2", 
+                    [uuid, user.id, user.name, user.plugins, user.servertype, user.serverid, user.logintoken, user.state])
                 break
             case UserAction.delete:
                 client.query('DELETE FROM sub_users WHERE owneruuid=$1 AND id=$2', [uuid, obj])

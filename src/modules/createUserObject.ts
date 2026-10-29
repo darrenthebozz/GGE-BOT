@@ -22,7 +22,7 @@ function proxyHelper(origin: any, ...keys: any[]): ProxyHandler<any> {
                 })
                 
                 if (Object.prototype.hasOwnProperty.call(originRef, key) && Object.getPrototypeOf(target[key]) === Object.prototype)
-                    Object.setPrototypeOf(target[key], Object.getPrototypeOf(target)[key])
+                    Object.setPrototypeOf(target[key], Object.getPrototypeOf(target)[key] ?? {})
 
                 return new Proxy(target[key], proxyHelper(origin, ...keys, key))
             }

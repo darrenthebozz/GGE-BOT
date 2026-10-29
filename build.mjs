@@ -1,28 +1,25 @@
 import * as esbuild from 'esbuild'
 import { spawn } from 'node:child_process'
-import { cp, readdir, rm, writeFile, access, mkdir } from 'node:fs/promises'
+import { cp, readdir, rm, writeFile, access, mkdir, readFile } from 'node:fs/promises'
 import AdmZip from 'adm-zip'
 import path, { join, normalize, basename } from 'node:path'
-import { tmpdir } from 'node:os'
 
-const workingPath = join(tmpdir(), 'ggeBot')
-const itemsPath = join(workingPath, 'items')
+const itemsPath = join('src', 'items')
 
-await rm('./dist', { recursive: true, force: true })
+await rm('./dist/server', { recursive: true, force: true })
+await rm('./dist/client', { recursive: true, force: true })
 await mkdir(join('.', 'dist', "items"), { recursive: true })
 
 let itemsVersion = await readFile(join(itemsPath, 'versionInfo.json'))
   .then(o => JSON.parse(o.toString())?.version["@value"]).catch(({ }) => "")
 
-if (!access(itemsPath).catch(o => undefined)) {
-  const currentItemVersion = await fetch('https://empire-html5.goodgamestudios.com/default/items/ItemsVersion.properties').then(o => o.text())
-  if (itemsVersion != currentItemVersion) {
-    const response = await fetch(`https://empire-html5.goodgamestudios.com/default/items/items_v${currentItemVersion.match(new RegExp(/(?!.*=).*/))[0]}.json`).then(a => a.json())
+const currentItemVersion = await fetch('https://empire-html5.goodgamestudios.com/default/items/ItemsVersion.properties').then(o => o.text())
+if (itemsVersion != currentItemVersion) {
+  const response = await fetch(`https://empire-html5.goodgamestudios.com/default/items/items_v${currentItemVersion.match(new RegExp(/(?!.*=).*/))[0]}.json`).then(a => a.json())
 
-    for (const [key, value] of Object.entries(response))
-      if (/^[A-Za-z\_]+$/.test(key))
-        await writeFile(join(itemsPath, `${key}.json`), JSON.stringify(value))
-  }
+  for (const [key, value] of Object.entries(response))
+    if (/^[A-Za-z\_]+$/.test(key))
+      await writeFile(join(itemsPath, `${key}.json`), JSON.stringify(value))
 }
 
 const seaExtraAssets = (await readdir("./src/frontend/dist", { recursive: true, withFileTypes: true })).filter(f => !f.isDirectory())
@@ -52,7 +49,6 @@ const items = (await readdir(itemsPath, { recursive: true, withFileTypes: true }
     return [`@items/${parseFile.name}`, `./${join(parseFile.dir, parseFile.base)}`]
   })
 
-console.log(items)
 await Promise.all(items.map(([_, filename]) => {
   return writeFile(filename, `
     import { readFile } from 'node:fs/promises'

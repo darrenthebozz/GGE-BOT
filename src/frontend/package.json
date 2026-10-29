@@ -28,7 +28,6 @@
     "node-gyp": "^13.1.0",
     "pg": "^8.23.1",
     "reconnecting-websocket": "^4.4.0",
-    "sharp": "^0.35.5",
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
     "vue": "^3.5.44",
@@ -48,8 +47,6 @@
     "bufferutil@4.1.0": true,
     "esbuild@0.27.7": true,
     "esbuild@0.28.1": true,
-    "prisma@7.8.0": true,
-    "sharp@0.35.1": true,
-    "sharp@0.34.5": true
+    "prisma@7.8.0": true
   }
 }

@@ -1,6 +1,6 @@
 import '@bot/botOverrides'
 import { readFile } from 'node:fs/promises'
-import path, { join, normalize } from 'node:path'
+import path, { join } from 'node:path'
 import { getCallSites } from 'node:util'
 import { RateLimiter } from 'limiter'
 import client from '@modules/database'
@@ -77,7 +77,7 @@ const { name, plugins, servertype, serverid, logintoken, state } =
 const { server, zone } = instances.find(instance => instance.value == serverid)!
 const ws = new WebSocket(`wss://${server}`)
 
-export function getPluginOptions<T extends IPlugin>() {
+export function getPluginOptions<T extends Omit<IPlugin, 'key'>>() {
     const pluginKey = getCallSites(6)[2]?.scriptName
     if (!pluginKey)
         throw new Error("Missing plugin key")
@@ -242,14 +242,16 @@ Promise.allSettled(Array.from(Object.entries(plugins)).map(async ([key, object])
     if (!object?.state)
         return
 
-    const pluginData = pluginConfig.find(e => e.key == key)
+    console.log(JSON.stringify(pluginConfig))
+    const pluginData = pluginConfig.find(e => `./${e.key}` == key)
 
     if (!pluginData)
         return console.warn(key, " missing")
     try {
-        const filePath = path.parse(pluginData.filePath)
+        const filePath = path.parse(pluginData.key)
+        console.log(pluginConfig)
 
-        return await import(`./plugins/${join(filePath.dir, filePath.base)}`)
+        return (await import(`./plugins/${join(filePath.dir, filePath.name)}`))?.default?.()
     }
     catch (e) {
         console.warn(e)

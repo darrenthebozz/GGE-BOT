@@ -38,20 +38,25 @@ watch(isShowModal, () => {
     log.value = {}
 })
 function submitForm() {
-    validateUser(user.value, password.value, curlog => log.value = curlog).then(() => {
+    if (password.value || !_user) {
+        validateUser(user.value, password.value, curlog => log.value = curlog).then(() => {
+            ws.send(JSON.stringify([UserAction.change, { ...user.value, id: user.value.id }]))
+            closeModal()
+        }).catch(err => log.value = err)
+    }
+    else {
         ws.send(JSON.stringify([UserAction.change, { ...user.value, id: user.value.id }]))
         closeModal()
-    }).catch(err => log.value = err)
+    }
 }
 </script>
 <template>
-    <svg @click="showModal" v-if="!_user" xmlns="http://www.w3.org/2000/svg" 
-    class="hover:text-blue-600 size-6" fill="none" viewBox="0 0 24 24"
-                stroke-width="1.5" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-            </svg>
-    <svg @click="showModal" v-else class="w-5 h-5 hover:text-blue-600" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-        fill="none" viewBox="0 0 20 20">
+    <svg @click="showModal" v-if="!_user" xmlns="http://www.w3.org/2000/svg" class="hover:text-blue-600 size-6"
+        fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+    </svg>
+    <svg @click="showModal" v-else class="w-5 h-5 hover:text-blue-600" aria-hidden="true"
+        xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
         <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"
             d="M4 12.25V1m0 11.25a2.25 2.25 0 0 0 0 4.5m0-4.5a2.25 2.25 0 0 1 0 4.5M4 19v-2.25m6-13.5V1m0 2.25a2.25 2.25 0 0 0 0 4.5m0-4.5a2.25 2.25 0 0 1 0 4.5M10 19V7.75m6 4.5V1m0 11.25a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5ZM16 19v-2" />
     </svg>
@@ -135,7 +140,7 @@ function submitForm() {
                         {{ log.value }}
                     </fwb-alert>
                     <fwb-alert class="text-left flex-1 m-1" v-else-if="log.type == 'TIMEOUT'" type="warning">
-                        <vue-countdown :time="log.value! * 1000" v-slot="{ minutes, seconds }">
+                        <vue-countdown :time="(log.value! as number) * 1000" v-slot="{ minutes, seconds }">
                             Waiting {{ minutes }} minutes, {{ seconds }} seconds before continuing
                         </vue-countdown>
                     </fwb-alert>

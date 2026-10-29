@@ -1,4 +1,4 @@
-import { writeFile, access, mkdir } from "node:fs/promises"
+import { writeFile, mkdir } from "node:fs/promises"
 import { join } from "node:path"
 
 const itemsPath = join('./', 'src', 'items')

@@ -19,14 +19,15 @@ export interface IPluginOptionType {
 export type IPluginOption = {
     [K in keyof IPluginOptionType]: {
         readonly type: K;
+        readonly name?: string;
         readonly description?: string;
         readonly hideLabel?: boolean;
         readonly default?: IPluginOptionType[K];
     }
 }[keyof IPluginOptionType];
 export interface IPlugin {
-    readonly key : string
-    readonly filePath : string
+    readonly key: string
+    readonly name?: string
     readonly description: string
     readonly options: { readonly [key : string]: IPluginOption }
 }
