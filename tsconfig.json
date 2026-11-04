@@ -53,7 +53,7 @@
         "./src/frontend/*"
       ],
       "@items/*": [
-        "./src/items/*"
+        "./src/generated/items/*"
       ]
     }
   }

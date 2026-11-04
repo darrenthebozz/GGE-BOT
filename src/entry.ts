@@ -29,31 +29,34 @@ if (!isSea()) {
     child.on('close', process.exit)
 
     function exitHandler() {
-        child.kill()
+        if (!child.killed)
+            child.kill('SIGTERM')
     }
 
     process.on('exit', exitHandler)
     process.on('SIGINT', exitHandler)
+    process.on('SIGTERM', exitHandler)
 
     await waitForPort(4321)
 }
 
 const workingPath = join(tmpdir(), 'ggeBot')
 const configPath = join(workingPath, "ggeConfig.json")
-try { await mkdir(join(workingPath, "items"),  { recursive : true }) } 
-catch (e) { 
-    console.debug(e) }
-try { 
-    const userConfig = Object.assign(exampleConfig, JSON.parse(await readFile(configPath, 'utf-8')) as Partial<typeof exampleConfig>)
-    var config = Object.assign(userConfig, { url : new URL(userConfig.url) })
+try { await mkdir(join(workingPath, "items"), { recursive: true }) }
+catch (e) {
+    console.debug(e)
 }
-catch(e) {
+try {
+    const userConfig = Object.assign(exampleConfig, JSON.parse(await readFile(configPath, 'utf-8')) as Partial<typeof exampleConfig>)
+    var config = Object.assign(userConfig, { url: new URL(userConfig.url) })
+}
+catch (e) {
     try { await writeFile(configPath, JSON.stringify(exampleConfig)) }
-    catch(e) {
+    catch (e) {
         console.error("Could not create a config at workingPath.\n", e)
         process.exit(1)
-    }    
-    config = Object.assign(exampleConfig, { url : new URL(exampleConfig.url) })
+    }
+    config = Object.assign(exampleConfig, { url: new URL(exampleConfig.url) })
 }
 
 console.debug = !isSea() ? console.debug : () => { }
@@ -61,7 +64,7 @@ console.debug = !isSea() ? console.debug : () => { }
 export const address = new URL(`ws://${config.url.hostname}:${config.url.port}`)
 
 const pg = new EmbeddedPostgres({
-    databaseDir : join(workingPath, './db'),
+    databaseDir: join(workingPath, './db'),
     port: config.postgresPort,
     persistent: true,
     onLog: !isSea() ? console.debug : () => { }
@@ -69,8 +72,8 @@ const pg = new EmbeddedPostgres({
 const itemsCacheExpire = 60 * 30 * 1000
 let databaseInitialised = false
 let itemsVersion = await readFile(join(workingPath, "./items/versionInfo.json"))
-    .then(o => JSON.parse(o.toString())?.version["@value"]).catch(({}) => "")
-let itemsLastUpdate = NaN 
+    .then(o => JSON.parse(o.toString())?.version["@value"]).catch(({ }) => "")
+let itemsLastUpdate = NaN
 
 console.log(workingPath)
 try { await pg.initialise(); databaseInitialised = true } catch (e) { console.debug(e) }
@@ -87,7 +90,7 @@ const startBot = async (id: number, owneruuid: string) => {
 
         if (itemsVersion != currentItemVersion) {
             const response = await fetch(`https://empire-html5.goodgamestudios.com/default/items/items_v${currentItemVersion.match(new RegExp(/(?!.*=).*/))![0]}.json`).then(a => a.json())
-            
+
             for (const [key, value] of Object.entries(response))
                 if (/^[A-Za-z\_]+$/.test(key))
                     await writeFile(join(workingPath, `./items/${key}.json`), JSON.stringify(value))
@@ -99,9 +102,9 @@ const startBot = async (id: number, owneruuid: string) => {
 
     //@ts-ignore
     const isTest = !!globalThis.test as boolean
-    
-    const botPath = isSea() ? "./dist/server/bot" : join(import.meta.dirname, 'bot')
-    new Worker(botPath, { name: "GGEBotWorker", workerData: { id, owneruuid, workingPath, isTest } satisfies IBotConfig })
+    const bot = isSea() ? await readFile(join(import.meta.dirname, './bot.js')).then(o => o.toString()) : join(import.meta.dirname, './bot')
+
+    new Worker(bot, { name: "GGEBotWorker", eval : isSea(), workerData: { id, owneruuid, workingPath, isTest } satisfies IBotConfig })
 }
 
 if (databaseInitialised)
@@ -110,25 +113,25 @@ await client.query(`LISTEN sub_user_update; LISTEN history_update; LISTEN sub_us
 client.on('notification', ({ channel, payload }: any) => userEvents.emit(channel, payload))
 
 userEvents.on('history_update', payload => {
-    const { id, owneruuid, data, loglevel, timestamp } = JSON.parse(payload) as ILog & { id : number, owneruuid : string }
+    const { id, owneruuid, data, loglevel, timestamp } = JSON.parse(payload) as ILog & { id: number, owneruuid: string }
 
     activeUsers[owneruuid]?.forEach(({ ws, logSubuserID }) =>
         id == logSubuserID && ws.send(JSON.stringify([UserAction.log, { timestamp, data, loglevel }])))
 })
 userEvents.on('sub_user_update', payload => {
-    const [oldUser, newUser] = JSON.parse(payload) as [Partial<IUser> & { [key : string] : any}, IUser & { [key : string] : any}]
+    const [oldUser, newUser] = JSON.parse(payload) as [Partial<IUser> & { [key: string]: any }, IUser & { [key: string]: any }]
     const userChanges = (oldUser ? Object.entries(oldUser).reduce((obj: any, [key, value]) =>
         (newUser[key] != value && (obj[key] = newUser[key]), obj), {}) : newUser) as Partial<IUser>
-    
-    if(util.isDeepStrictEqual(oldUser.plugins, newUser.plugins))
+
+    if (util.isDeepStrictEqual(oldUser.plugins, newUser.plugins))
         delete userChanges.plugins
 
     userChanges.id = newUser.id
 
     if (userChanges.state == true)
         startBot(newUser.id, newUser.owneruuid)
-    
-    if(Object.keys(userChanges).length == 1) //FIX?
+
+    if (Object.keys(userChanges).length == 1) //FIX?
         return
 
     Array.from(activeUsers[newUser.owneruuid]?.keys() ?? []).forEach(ws =>
@@ -160,7 +163,7 @@ wss.on('connection', async (ws, { headers }) => {
 
     ws.send(JSON.stringify([UserAction.get, ...await client.query('Select name, plugins, state, serverType, serverID, id from sub_users WHERE owneruuid=$1', [uuid]).then((a: any) => a.rows)]))
 
-    ws.addEventListener("message", async ({ data })  => {
+    ws.addEventListener("message", async ({ data }) => {
         const [action, obj]: [number, any] = safeParse(data.toString())
 
         switch (action) {
@@ -178,7 +181,7 @@ wss.on('connection', async (ws, { headers }) => {
                     Object.assign(obj.plugins, previousPlugins)
                 }
                 const user = Object.assign(await client.query('SELECT name, plugins, serverType, serverID, loginToken, state FROM sub_users WHERE owneruuid=$1 AND id=$2', [uuid, obj.id]).then(e => e.rows[0]), obj) as IUser
-                client.query("UPDATE sub_users SET name=$3, plugins=$4, serverType=$5, serverID=$6, loginToken=$7, state=$8 WHERE owneruuid=$1 AND id=$2", 
+                client.query("UPDATE sub_users SET name=$3, plugins=$4, serverType=$5, serverID=$6, loginToken=$7, state=$8 WHERE owneruuid=$1 AND id=$2",
                     [uuid, user.id, user.name, user.plugins, user.servertype, user.serverid, user.logintoken, user.state])
                 break
             case UserAction.delete:
@@ -188,7 +191,7 @@ wss.on('connection', async (ws, { headers }) => {
                 if (activeUser.logSubuserID = Number(obj))
                     ws.send(JSON.stringify([UserAction.log,
                     ...(await client.query('SELECT json_agg(logs) AS logs FROM sub_users WHERE owneruuid=$1 AND id=$2', [uuid, activeUser.logSubuserID])
-                        .then(e => e.rows?.[0]?.logs.filter((e : any) => e != null) ?? []))]))
+                        .then(e => e.rows?.[0]?.logs.filter((e: any) => e != null) ?? []))]))
                 break
         }
     })

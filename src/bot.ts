@@ -1,6 +1,6 @@
 import '@bot/botOverrides'
 import { readFile } from 'node:fs/promises'
-import path, { join } from 'node:path'
+import { join } from 'node:path'
 import { getCallSites } from 'node:util'
 import { RateLimiter } from 'limiter'
 import client from '@modules/database'
@@ -238,27 +238,13 @@ xtHandler.on("lli", async (obj, result) => {
 if (state == false)
     close()
 
-Promise.allSettled(Array.from(Object.entries(plugins)).map(async ([key, object]) => {
-    if (!object?.state)
-        return
+Promise.allSettled(pluginConfig.filter(p => plugins[p.key]?.state == true).map((pluginOptions => pluginOptions.init())))
+    .then(pluginStates => {
+        pluginStates.filter(p => p.status == 'rejected').forEach(pluginState => {
+            console.warn(pluginState.reason)
+        })
+        console.log("Started")
 
-    console.log(JSON.stringify(pluginConfig))
-    const pluginData = pluginConfig.find(e => `./${e.key}` == key)
-
-    if (!pluginData)
-        return console.warn(key, " missing")
-    try {
-        const filePath = path.parse(pluginData.key)
-        console.log(pluginConfig)
-
-        return (await import(`./plugins/${join(filePath.dir, filePath.name)}`))?.default?.()
-    }
-    catch (e) {
-        console.warn(e)
-    }
-})).then(() => {
-    console.log("Started")
-    if (isTest) {
-        events.emit("load")
-    }
-})
+        if (isTest)
+            events.emit("load")
+    })

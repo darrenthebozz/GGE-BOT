@@ -11,7 +11,7 @@ import SubUser from "./sub-user.vue"
 import Setup from "./subuser-settings.vue"
 import UserAction from '@modules/CUserAction.js'
 import createUserObject from '@modules/createUserObject.js'
-import ws from '../js/webSocket.js'
+import ws from '../js/webSocket'
 import type { IUser } from '@bot/types.d.ts'
 
 const lang = await fetch("/lang/en").then(a => a.json()) as { [key: string]: string | undefined }

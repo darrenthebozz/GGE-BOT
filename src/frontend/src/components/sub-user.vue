@@ -2,7 +2,7 @@
 import CastleView from './castle-view.vue'
 import SubUserSettings from './subuser-settings.vue'
 import UserAction from '@modules/CUserAction.js'
-import webSocket from '../js/webSocket.js'
+import webSocket from '../js/webSocket'
 import Log from './log.vue'
 import type { IUser } from '@bot/types.d.ts'
 import { ref } from 'vue'

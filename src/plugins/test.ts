@@ -11,7 +11,7 @@ export const pluginInfo = {
 } satisfies Omit<IPlugin, 'key'>
 
 export default async () => {
-    const { events, getPluginOptions } = await import("@bot")
+    const { events, getPluginOptions } = await import(/* @vite-ignore */"@bot")
     const options = getPluginOptions<typeof pluginInfo>()
     const units = await import('@items/units.json').then(o => o.default) 
 

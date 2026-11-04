@@ -10,8 +10,10 @@ import { isSea } from "node:sea"
 const { id, owneruuid } = workerData as IBotConfig
 
 function mngLog(logLevel: "INFO" | "WARNING" | "ERROR" | "DEBUG", ...msg: Array<any>) {
-    const fileName = basename(getCallSites(6)[2]?.scriptName ?? "Unknown").slice(0, -3)
-    const message = ['[', fileName, '] ', ...(msg.map(m => m instanceof Error ? m.message : String(m)))]
+    const fileName = basename(getCallSites(6)[2]?.scriptName?.slice(0, -3) ?? "Unknown")
+    const fileNameLog = isSea() ? [] : ['[', fileName, ']']
+    const message = [...fileNameLog,
+         ...(msg.map(m => m instanceof Error ? m.message : String(m)))]
     
     client.query('SELECT add_log($1,$2,$3,$4)', [owneruuid, id, message, logLevel])
 }
